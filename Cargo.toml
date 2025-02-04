@@ -7,3 +7,9 @@ edition = "2021"
 test = false
 
 [dependencies]
+
+[dependencies.windows-sys]
+version = "0.59.0"
+features = [
+    "Win32_System_Environment"
+]
