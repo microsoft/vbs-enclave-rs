@@ -1,5 +1,9 @@
 use core::alloc::{GlobalAlloc, Layout};
 
+// Since this must be compiled as no_std, an allocator needs to be defined.
+// Nothing complicated is needed, so the enclave allocator is just a passthrough
+// of malloc and free.
+
 extern "C" {
     fn malloc(s: usize) -> *mut u8;
     fn free(p: *const u8);

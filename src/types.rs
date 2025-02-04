@@ -52,7 +52,6 @@ impl<T: Copy> VTL1ClonableArray<T> for VTL0Array<T> {
     }
 }
 
-
 /// Mutable VTL0 Pointer
 /// If your function needs to flush some sort of structure back to VTL0 when the call
 /// completes, you can express that as a VTL0MutPtr in your VTL0 struct, and as a
@@ -112,13 +111,13 @@ impl<T: Copy> VTL1ClonableArray<T> for VTL0Array<T> {
 /// ```
 pub struct VTL1MutPtr<T: Copy + Default> {
     vtl1_owned: Box<T>,
-    vtl0_ptr: *mut T
+    vtl0_ptr: *mut T,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct VTL0MutPtr<T: Copy + Default> {
-    p: *mut T
+    p: *mut T,
 }
 
 impl<T: Copy + Default> TryFrom<VTL0MutPtr<T>> for VTL1MutPtr<T> {
@@ -126,7 +125,10 @@ impl<T: Copy + Default> TryFrom<VTL0MutPtr<T>> for VTL1MutPtr<T> {
     fn try_from(value: VTL0MutPtr<T>) -> Result<Self, Self::Error> {
         if is_valid_vtl0(value.p as usize, size_of::<T>()) {
             unsafe {
-                Ok(VTL1MutPtr{ vtl1_owned: Box::new(*value.p.clone()), vtl0_ptr: value.p})
+                Ok(VTL1MutPtr {
+                    vtl1_owned: Box::new(*value.p.clone()),
+                    vtl0_ptr: value.p,
+                })
             }
         } else {
             Err(HResultError::InvalidArgument as NativeHResult)
@@ -135,7 +137,10 @@ impl<T: Copy + Default> TryFrom<VTL0MutPtr<T>> for VTL1MutPtr<T> {
 }
 
 impl<T> Drop for VTL1MutPtr<T>
-    where T: Copy, T: Default {
+where
+    T: Copy,
+    T: Default,
+{
     fn drop(&mut self) {
         unsafe {
             *self.vtl0_ptr = *self.vtl1_owned;

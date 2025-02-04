@@ -1,4 +1,6 @@
-use core::mem::offset_of;
+use core::{ffi::c_void, mem::offset_of};
+
+use alloc::vec::Vec;
 
 pub const ENCLAVE_LONG_ID_LENGTH: usize = 32;
 pub const ENCLAVE_SHORT_ID_LENGTH: usize = 16;
@@ -13,6 +15,8 @@ pub const ENCLAVE_FLAG_FULL_DEBUG_ENABLED: u32 = 0x0000_0001;
 pub const ENCLAVE_FLAG_DYNAMIC_DEBUG_ENABLED: u32 = 0x0000_0002;
 
 pub const ENCLAVE_FLAG_DYNAMIC_DEBUG_ACTIVE: u32 = 0x0000_0004;
+
+pub const ENCLAVE_REPORT_DATA_LENGTH: usize = 64;
 
 // #pragma pack(1)
 // typedef struct ENCLAVE_IDENTITY {
@@ -192,35 +196,139 @@ impl TryFrom<u32> for HResultError {
 pub type NativeHResult = u32;
 pub type HResult = Result<HResultSuccess, NativeHResult>;
 
+#[repr(u32)]
+pub enum SealingIdentityPolicy {
+    Invalid = 0,
+    ExactCode = 1,
+    PrimaryCode = 2,
+    SameImage = 3,
+    SameFamily = 4,
+    SameAuthor = 5,
+}
+
+#[repr(u32)]
+pub enum SealingRuntimePolicy {
+    AllowFullDebug = 1,
+    AllowDynamicDebug = 2,
+}
+
 extern "system" {
+    // HRESULT EnclaveGetAttestationReport(
+    //     [in, optional] const UINT8 [ENCLAVE_REPORT_DATA_LENGTH] EnclaveData,
+    //     [out]          PVOID                                    Report,
+    //     [in]           UINT32                                   BufferSize,
+    //     [out]          UINT32                                   *OutputSize
+    //   );
+    fn EnclaveGetAttestationReport(
+        enclave_data: *const u8,
+        report: *mut u8,
+        buffer_size: u32,
+        output_size: &mut u32,
+    ) -> NativeHResult;
+
+    // HRESULT EnclaveGetEnclaveInformation(
+    //     [in]  UINT32              InformationSize,
+    //     [out] ENCLAVE_INFORMATION *EnclaveInformation
+    //   );
     fn EnclaveGetEnclaveInformation(
         information_size: u32,
         enclave_information: *mut EnclaveInformation,
     ) -> NativeHResult;
 
-    // BOOL CallEnclave(
-    //     [in]  LPENCLAVE_ROUTINE lpRoutine,
-    //     [in]  LPVOID            lpParameter,
-    //     [in]  BOOL              fWaitForThread,
-    //     [out] LPVOID            *lpReturnValue
+    // HRESULT EnclaveSealData(
+    //     [in]  const VOID                      *DataToEncrypt,
+    //     [in]  UINT32                          DataToEncryptSize,
+    //     [in]  ENCLAVE_SEALING_IDENTITY_POLICY IdentityPolicy,
+    //     [in]  UINT32                          RuntimePolicy,
+    //     [out] PVOID                           ProtectedBlob,
+    //     [in]  UINT32                          BufferSize,
+    //     [out] UINT32                          *ProtectedBlobSize
     //   );
-    // fn CallEnclave(routine: usize, parameter: usize, wait_for_thread: bool, return_value: &mut usize) -> bool;
+    fn EnclaveSealData(
+        data_to_encrypt: *const u8,
+        data_to_encrypt_size: u32,
+        identity_policy: SealingIdentityPolicy,
+        runtime_policy: SealingRuntimePolicy,
+        protected_blob: *mut u8,
+        buffer_size: u32,
+        protected_blob_size: &mut u32,
+    ) -> NativeHResult;
 
-    fn GetLastError() -> u32;
+    // HRESULT EnclaveUnsealData(
+    //     [in]            const VOID       *ProtectedBlob,
+    //     [in]            UINT32           ProtectedBlobSize,
+    //     [out]           PVOID            DecryptedData,
+    //     [in]            UINT32           BufferSize,
+    //     [out]           UINT32           *DecryptedDataSize,
+    //     [out, optional] ENCLAVE_IDENTITY *SealingIdentity,
+    //     [out, optional] UINT32           *UnsealingFlags
+    //   );
+    fn EnclaveUnsealData(
+        protected_blob: *const u8,
+        protected_blob_size: u32,
+        decrypted_data: *mut u8,
+        buffer_size: u32,
+        decrypted_data_size: &mut u32,
+        sealing_identity: &mut EnclaveIdentity,
+        unsealing_flags: &mut u32,
+    ) -> NativeHResult;
+
+    // HRESULT EnclaveVerifyAttestationReport(
+    //     [in] UINT32     EnclaveType,
+    //     [in] const VOID *Report,
+    //     [in] UINT32     ReportSize
+    //   );
+    fn EnclaveVerifyAttestationReport(
+        enclave_type: u32,
+        report: *const u8,
+        report_size: u32,
+    ) -> NativeHResult;
+
 }
 
-pub fn get_enclave_information(enclave_information: &mut EnclaveInformation) -> HResult {
+pub fn get_attestation_report(
+    enclave_data: &[u8; ENCLAVE_REPORT_DATA_LENGTH],
+) -> Result<Vec<u8>, NativeHResult> {
+    let mut output_size: u32 = 0;
+    let mut report: Vec<u8> = Vec::new();
+    unsafe {
+        match EnclaveGetAttestationReport(
+            enclave_data as *const u8,
+            core::ptr::null_mut(),
+            0,
+            &mut output_size,
+        ) {
+            0 => {}
+            e => return Err(e),
+        }
+    }
+
+    report.resize(output_size as usize, 0);
+
+    unsafe {
+        match EnclaveGetAttestationReport(
+            enclave_data as *const u8,
+            report.as_mut_ptr(),
+            report.len() as u32,
+            &mut output_size,
+        ) {
+            0 => {}
+            e => return Err(e),
+        }
+    }
+
+    Ok(report)
+}
+
+pub fn get_enclave_information() -> Result<EnclaveInformation, NativeHResult> {
+    let mut info = EnclaveInformation::default();
     unsafe {
         match EnclaveGetEnclaveInformation(
             size_of::<EnclaveInformation>() as u32,
-            enclave_information as *mut _,
+            &mut info as *mut _,
         ) {
-            0 => Ok(HResultSuccess::Ok),
+            0 => Ok(info),
             e => Err(e),
         }
     }
-}
-
-pub fn get_last_error() -> u32 {
-    unsafe { GetLastError() }
 }

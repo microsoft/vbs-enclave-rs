@@ -8,7 +8,7 @@ extern crate alloc;
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use winenclave::{get_enclave_information, EnclaveInformation};
+use winenclave::get_enclave_information;
 
 use core::panic::PanicInfo;
 #[panic_handler]
@@ -33,12 +33,10 @@ pub fn is_valid_vtl0(start: usize, size: usize) -> bool {
 pub extern "system" fn dllmain() -> bool {
     // Calculate this enclave's start and end addresses, so VTL0
     // pointers can be validated during enclave functions.
-    let mut info = EnclaveInformation::default();
-
-    match get_enclave_information(&mut info) {
-        Ok(_) => {}
+    let info = match get_enclave_information() {
+        Ok(i) => i,
         _ => return false,
-    }
+    };
 
     ENCLAVE_BASE.store(info.base_address(), Ordering::Relaxed);
     ENCLAVE_END.store(info.base_address() + info.size(), Ordering::Relaxed);
