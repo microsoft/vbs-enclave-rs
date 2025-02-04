@@ -18,7 +18,7 @@ pub struct VTL0Ptr<T: Copy>(*const T);
 impl<T: Copy> VTL1Clonable<T> for VTL0Ptr<T> {
     fn clone_into_vtl1(&self) -> Result<T, NativeHResult> {
         unsafe {
-            if is_valid_vtl0(self.0 as usize, size_of::<T>()) {
+            if is_valid_vtl0(self.0 as *const _, size_of::<T>()) {
                 Ok(*self.0.clone())
             } else {
                 Err(HResultError::InvalidArgument as NativeHResult)
@@ -41,7 +41,7 @@ pub struct VTL0Array<T> {
 impl<T: Copy> VTL1ClonableArray<T> for VTL0Array<T> {
     fn clone_into_vtl1(&self) -> Result<Box<[T]>, NativeHResult> {
         unsafe {
-            if is_valid_vtl0(self.buffer as usize, self.count * size_of::<T>()) {
+            if is_valid_vtl0(self.buffer as *const _, self.count * size_of::<T>()) {
                 Ok(slice::from_raw_parts(self.buffer, self.count)
                     .to_vec()
                     .into_boxed_slice())
@@ -123,7 +123,7 @@ pub struct VTL0MutPtr<T: Copy + Default> {
 impl<T: Copy + Default> TryFrom<VTL0MutPtr<T>> for VTL1MutPtr<T> {
     type Error = NativeHResult;
     fn try_from(value: VTL0MutPtr<T>) -> Result<Self, Self::Error> {
-        if is_valid_vtl0(value.p as usize, size_of::<T>()) {
+        if is_valid_vtl0(value.p as *const _, size_of::<T>()) {
             unsafe {
                 Ok(VTL1MutPtr {
                     vtl1_owned: Box::new(*value.p.clone()),
