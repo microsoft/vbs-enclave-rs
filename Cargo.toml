@@ -1,5 +1,5 @@
 [package]
-name = "enclave-sys"
+name = "vbs-enclave"
 version = "0.1.0"
 edition = "2021"
 

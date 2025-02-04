@@ -1,0 +1,18 @@
+[package]
+name = "sample-vbs-enclave-rs"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+test = false
+
+[profile.release]
+panic = "abort"
+
+[profile.dev]
+panic = "abort"
+
+[dependencies]
+vbs-enclave = { path=".." }
+hex-literal = "0.4.1"

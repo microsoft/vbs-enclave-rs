@@ -1,0 +1,25 @@
+rustflags = [
+    # Pre Link Args
+    # -Z is unstable options, only available on nightly
+    "-Z", "pre-link-arg=/NXCOMPAT",
+    "-Z", "pre-link-arg=/NODEFAULTLIB",
+    "-Z", "pre-link-arg=/SUBSYSTEM:NATIVE",
+    "-Z", "pre-link-arg=/DYNAMICBASE",
+    "-Z", "pre-link-arg=/MANIFEST:NO",
+
+    # Post Link Args -- these are dynamically generated in build.rs
+#    "-C", "link-arg=/OPT:REF,ICF",
+#    "-C", "link-arg=/ENTRY:dllmain",
+#    "-C", "link-arg=/MERGE:.edata=.rdata",
+#    "-C", "link-arg=/MERGE:.rustc=.data",
+#    "-C", "link-arg=/INTEGRITYCHECK",
+#    "-C", "link-arg=/enclave",
+#    "-C", "link-arg=/GUARD:MIXED",
+#    "-C", "link-arg=/include:__enclave_config",
+#    "-C", "link-arg=C:\\Debuggers\\Lib\\10.0.26100.0\\ucrt_enclave\\x64\\ucrt.lib",
+#    # libvcruntime *must* come before vertdll in the link order, or it will error
+#    "-C", "link-arg=C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.42.34321\\lib\\x64\\enclave\\libvcruntime.lib",
+#    "-C", "link-arg=C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.42.34321\\lib\\x64\\enclave\\libcmt.lib",
+#    "-C", "link-arg=vertdll.lib",
+#    "-C", "link-arg=bcrypt.lib",
+]
