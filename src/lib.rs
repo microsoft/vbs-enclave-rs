@@ -29,7 +29,7 @@ pub fn is_valid_vtl0(base: *const c_void, size: usize) -> bool {
 
     let end = base.wrapping_byte_add(size);
 
-    !base.is_null() && ((end < enclave_base) || (enclave_end <= end))
+    !base.is_null() && ((end < enclave_base) || (enclave_end <= start))
 }
 
 #[no_mangle]
