@@ -1,4 +1,6 @@
 #![no_std]
+use core::ffi::c_void;
+use core::ptr;
 
 mod allocator;
 pub mod types;
@@ -6,7 +8,7 @@ pub mod winenclave;
 
 extern crate alloc;
 
-use core::sync::atomic::{AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicPtr, Ordering};
 
 use winenclave::get_enclave_information;
 
@@ -18,15 +20,16 @@ fn panic(_panic: &PanicInfo<'_>) -> ! {
     loop {}
 }
 
-pub static ENCLAVE_BASE: AtomicUsize = AtomicUsize::new(0);
-pub static ENCLAVE_END: AtomicUsize = AtomicUsize::new(0);
+pub static ENCLAVE_BASE: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
+pub static ENCLAVE_END: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
 
-pub fn is_valid_vtl0(start: usize, size: usize) -> bool {
-    let base = ENCLAVE_BASE.load(Ordering::Relaxed);
+pub fn is_valid_vtl0(base: *const c_void, size: usize) -> bool {
+    let enclave_base = ENCLAVE_BASE.load(Ordering::Relaxed) as *const _;
+    let enclave_end = ENCLAVE_END.load(Ordering::Relaxed) as *const _;
 
-    let end = ENCLAVE_END.load(Ordering::Relaxed);
+    let end = base.wrapping_byte_add(size);
 
-    return start != 0 && (start + size < base || start > end);
+    !base.is_null() && ((end < enclave_base) || (enclave_end <= end))
 }
 
 #[no_mangle]
@@ -38,8 +41,10 @@ pub extern "system" fn dllmain() -> bool {
         _ => return false,
     };
 
-    ENCLAVE_BASE.store(info.base_address(), Ordering::Relaxed);
-    ENCLAVE_END.store(info.base_address() + info.size(), Ordering::Relaxed);
+    let end = info.BaseAddress.wrapping_byte_add(info.Size);
+
+    ENCLAVE_BASE.store(info.BaseAddress, Ordering::Relaxed);
+    ENCLAVE_END.store(end, Ordering::Relaxed);
 
     true
 }
