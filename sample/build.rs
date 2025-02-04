@@ -34,8 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .arg(SDK_SCRIPT)
         .output()?
         .stdout;
-    let sdk_path = str::from_utf8(&powershell_output)?
-        .trim();
+    let sdk_path = str::from_utf8(&powershell_output)?.trim();
 
     println!("{}", sdk_path);
 
@@ -55,10 +54,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .output()?
         .stdout;
 
-    let install_path = Path::new(
-        str::from_utf8(&vswhere_output)?
-            .trim(),
-    );
+    let install_path = Path::new(str::from_utf8(&vswhere_output)?.trim());
 
     let mut default_path = String::new();
     std::fs::File::open(install_path.join(VCTOOLS_DEFAULT_PATH))
