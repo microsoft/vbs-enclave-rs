@@ -2,15 +2,14 @@
 
 use hex_literal::hex;
 
-use enclave_sys::types::VTL0Ptr;
-use enclave_sys::winenclave::{
+use vbs_enclave::types::VTL0Ptr;
+use vbs_enclave::winenclave::{
     HResult, HResultError, HResultSuccess, ImageEnclaveConfig, NativeHResult,
     IMAGE_ENCLAVE_FLAG_PRIMARY_IMAGE, IMAGE_ENCLAVE_MINIMUM_CONFIG_SIZE,
-    IMAGE_ENCLAVE_POLICY_DEBUGGABLE,
 };
 
 #[cfg(debug_assertions)]
-const ENCLAVE_CONFIG_POLICY_FLAGS: u32 = IMAGE_ENCLAVE_POLICY_DEBUGGABLE;
+const ENCLAVE_CONFIG_POLICY_FLAGS: u32 = vbs_enclave::winenclave::IMAGE_ENCLAVE_POLICY_DEBUGGABLE;
 #[cfg(not(debug_assertions))]
 const ENCLAVE_CONFIG_POLICY_FLAGS: u32 = 0;
 

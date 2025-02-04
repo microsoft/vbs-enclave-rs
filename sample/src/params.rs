@@ -1,6 +1,8 @@
 extern crate alloc;
 use alloc::boxed::Box;
-use enclave_sys::types::{VTL0Ptr, VTL1MutPtr, VTL0MutPtr, VTL0Array, VTL1ClonableArray, VTL1Clonable};
+use vbs_enclave::types::{
+    VTL0Array, VTL0MutPtr, VTL0Ptr, VTL1Clonable, VTL1ClonableArray, VTL1MutPtr,
+};
 
 /// VTL0 C++ Structure:
 /// ```
