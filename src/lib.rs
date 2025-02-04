@@ -20,8 +20,8 @@ fn panic(_panic: &PanicInfo<'_>) -> ! {
     loop {}
 }
 
-pub static ENCLAVE_BASE: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
-pub static ENCLAVE_END: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
+static ENCLAVE_BASE: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
+static ENCLAVE_END: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
 
 pub fn is_valid_vtl0(base: *const c_void, size: usize) -> bool {
     let enclave_base = ENCLAVE_BASE.load(Ordering::Relaxed) as *const _;
