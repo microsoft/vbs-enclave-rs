@@ -2,7 +2,7 @@
 
 use hex_literal::hex;
 
-use vbs_enclave::error::{Error, HRESULT, S_OK};
+use vbs_enclave::error::{EnclaveError, HRESULT, S_OK};
 use vbs_enclave::types::VTL0Ptr;
 use vbs_enclave::winenclave::{
     ImageEnclaveConfig, IMAGE_ENCLAVE_FLAG_PRIMARY_IMAGE, IMAGE_ENCLAVE_MINIMUM_CONFIG_SIZE,
@@ -63,9 +63,9 @@ extern "C" fn my_enclave_function(param: VTL0Ptr<MyEnclaveParams>) -> HRESULT {
     }
 }
 
-fn my_enclave_function_safe(params: &mut VTL1MyEnclaveParams) -> Result<(), Error> {
+fn my_enclave_function_safe(params: &mut VTL1MyEnclaveParams) -> Result<(), EnclaveError> {
     if params.a + params.b != params.c {
-        return Err(Error::invalid_arg());
+        return Err(EnclaveError::invalid_arg());
     }
 
     *params.e = params.d.iter().sum();

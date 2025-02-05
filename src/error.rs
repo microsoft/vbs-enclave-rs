@@ -4,16 +4,16 @@ pub use windows_sys::Win32::Foundation::S_OK;
 
 #[allow(private_bounds)]
 pub(crate) trait CheckHResult: Sealed {
-    fn check(self) -> Result<(), Error>;
+    fn check(self) -> Result<(), EnclaveError>;
 }
 
 // Impl for `HRESULT` from `windows-sys`, only.
 impl CheckHResult for HRESULT {
-    fn check(self) -> Result<(), Error> {
+    fn check(self) -> Result<(), EnclaveError> {
         if self == 0 {
             Ok(())
         } else {
-            Err(Error { hresult: self })
+            Err(EnclaveError { hresult: self })
         }
     }
 }
@@ -23,11 +23,11 @@ impl Sealed for HRESULT {}
 
 #[derive(Debug, thiserror::Error)]
 #[error("enclave error: {hresult:x}")]
-pub struct Error {
+pub struct EnclaveError {
     pub hresult: HRESULT,
 }
 
-impl Error {
+impl EnclaveError {
     pub fn invalid_arg() -> Self {
         Self {
             hresult: E_INVALIDARG,
@@ -35,8 +35,8 @@ impl Error {
     }
 }
 
-impl From<Error> for HRESULT {
-    fn from(err: Error) -> Self {
+impl From<EnclaveError> for HRESULT {
+    fn from(err: EnclaveError) -> Self {
         err.hresult
     }
 }
