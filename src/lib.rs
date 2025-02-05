@@ -3,7 +3,7 @@ use core::ffi::c_void;
 use core::ptr;
 
 mod allocator;
-mod error;
+pub mod error;
 pub mod types;
 pub mod winenclave;
 
