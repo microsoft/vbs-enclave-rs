@@ -2,10 +2,10 @@
 
 use hex_literal::hex;
 
+use vbs_enclave::error::{EnclaveError, HRESULT, S_OK};
 use vbs_enclave::types::VTL0Ptr;
 use vbs_enclave::winenclave::{
-    HResult, HResultError, HResultSuccess, ImageEnclaveConfig, NativeHResult,
-    IMAGE_ENCLAVE_FLAG_PRIMARY_IMAGE, IMAGE_ENCLAVE_MINIMUM_CONFIG_SIZE,
+    ImageEnclaveConfig, IMAGE_ENCLAVE_FLAG_PRIMARY_IMAGE, IMAGE_ENCLAVE_MINIMUM_CONFIG_SIZE,
 };
 
 #[cfg(debug_assertions)]
@@ -45,10 +45,10 @@ mod params;
 use params::*;
 
 #[no_mangle]
-extern "C" fn my_enclave_function(param: VTL0Ptr<MyEnclaveParams>) -> NativeHResult {
+extern "C" fn my_enclave_function(param: VTL0Ptr<MyEnclaveParams>) -> HRESULT {
     let mut params = match param.try_into() {
         Ok(p) => p,
-        Err(e) => return e,
+        Err(e) => return HRESULT::from(e),
     };
 
     // Alternatively, if you want typing explicit:
@@ -58,17 +58,17 @@ extern "C" fn my_enclave_function(param: VTL0Ptr<MyEnclaveParams>) -> NativeHRes
     // };
 
     match my_enclave_function_safe(&mut params) {
-        Ok(s) => s as NativeHResult,
-        Err(e) => e,
+        Ok(()) => S_OK,
+        Err(e) => e.into(),
     }
 }
 
-fn my_enclave_function_safe(params: &mut VTL1MyEnclaveParams) -> HResult {
+fn my_enclave_function_safe(params: &mut VTL1MyEnclaveParams) -> Result<(), EnclaveError> {
     if params.a + params.b != params.c {
-        return Err(HResultError::InvalidState as NativeHResult);
+        return Err(EnclaveError::invalid_arg());
     }
 
     *params.e = params.d.iter().sum();
 
-    Ok(HResultSuccess::Ok)
+    Ok(())
 }

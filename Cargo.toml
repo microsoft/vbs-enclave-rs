@@ -7,6 +7,7 @@ edition = "2021"
 test = false
 
 [dependencies]
+thiserror = { version = "2.0", default-features = false }
 
 [dependencies.windows-sys]
 version = "0.59.0"

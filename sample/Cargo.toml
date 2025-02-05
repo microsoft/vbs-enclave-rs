@@ -14,5 +14,5 @@ panic = "abort"
 panic = "abort"
 
 [dependencies]
-vbs-enclave = { path=".." }
+vbs-enclave = { path = ".." }
 hex-literal = "0.4.1"
