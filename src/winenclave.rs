@@ -13,7 +13,7 @@ use windows_sys::{
     }
 };
 
-use crate::error::{CheckHResult, EnclaveError};
+use crate::error::{check_hr, EnclaveError};
 
 pub const ENCLAVE_LONG_ID_LENGTH: usize = 32;
 pub const ENCLAVE_SHORT_ID_LENGTH: usize = 16;
@@ -112,7 +112,7 @@ pub fn get_attestation_report(
             &mut output_size,
         )
     };
-    hr.check()?;
+    check_hr(hr)?;
 
     report.resize(output_size as usize, 0);
 
@@ -124,7 +124,7 @@ pub fn get_attestation_report(
             &mut output_size,
         )
     };
-    hr.check()?;
+    check_hr(hr)?;
 
     Ok(report)
 }
@@ -137,7 +137,7 @@ pub fn get_enclave_information() -> Result<ENCLAVE_INFORMATION, EnclaveError> {
             info.as_mut_ptr(),
         )
     };
-    hr.check()?;
+    check_hr(hr)?;
 
     let info = unsafe {
         // SAFETY: only reachable if above HResult check passes.
@@ -169,7 +169,7 @@ pub fn seal_data(
             &mut output_size
         )
     };
-    hr.check()?;
+    check_hr(hr)?;
 
     let mut sealed_data = Vec::new();
     sealed_data.resize(output_size as usize, 0);
@@ -185,7 +185,7 @@ pub fn seal_data(
             &mut output_size
         )
     };
-    hr.check()?;
+    check_hr(hr)?;
 
     Ok(sealed_data)
 }
@@ -220,7 +220,7 @@ pub fn unseal_data(data: &[u8], sealing_identity: Option<&mut ENCLAVE_IDENTITY>,
             unsealingflags
         )
     };
-    hr.check()?;
+    check_hr(hr)?;
 
     let mut decrypted_data: Vec<u8> = Vec::new();
     decrypted_data.resize(decrypted_data_size as usize, 0);
@@ -236,7 +236,7 @@ pub fn unseal_data(data: &[u8], sealing_identity: Option<&mut ENCLAVE_IDENTITY>,
             unsealingflags
         )
     };
-    hr.check()?;
+    check_hr(hr)?;
 
     Ok(decrypted_data)
 }
