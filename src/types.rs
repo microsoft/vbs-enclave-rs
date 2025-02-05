@@ -4,11 +4,11 @@ use alloc::{boxed::Box, slice};
 
 use crate::{
     is_valid_vtl0,
-    winenclave::{HResultError, NativeHResult},
+    error::Error,
 };
 
 pub trait VTL1Clonable<T: Copy> {
-    fn clone_into_vtl1(&self) -> Result<T, NativeHResult>;
+    fn clone_into_vtl1(&self) -> Result<T, Error>;
 }
 
 #[repr(C)]
@@ -16,19 +16,19 @@ pub trait VTL1Clonable<T: Copy> {
 pub struct VTL0Ptr<T: Copy>(*const T);
 
 impl<T: Copy> VTL1Clonable<T> for VTL0Ptr<T> {
-    fn clone_into_vtl1(&self) -> Result<T, NativeHResult> {
+    fn clone_into_vtl1(&self) -> Result<T, Error> {
         unsafe {
             if is_valid_vtl0(self.0 as *const _, size_of::<T>()) {
                 Ok(*self.0.clone())
             } else {
-                Err(HResultError::InvalidArgument as NativeHResult)
+                Err(Error::invalid_arg())
             }
         }
     }
 }
 
 pub trait VTL1ClonableArray<T> {
-    fn clone_into_vtl1(&self) -> Result<Box<[T]>, NativeHResult>;
+    fn clone_into_vtl1(&self) -> Result<Box<[T]>, Error>;
 }
 
 #[repr(C)]
@@ -39,14 +39,14 @@ pub struct VTL0Array<T> {
 }
 
 impl<T: Copy> VTL1ClonableArray<T> for VTL0Array<T> {
-    fn clone_into_vtl1(&self) -> Result<Box<[T]>, NativeHResult> {
+    fn clone_into_vtl1(&self) -> Result<Box<[T]>, Error> {
         unsafe {
             if is_valid_vtl0(self.buffer as *const _, self.count * size_of::<T>()) {
                 Ok(slice::from_raw_parts(self.buffer, self.count)
                     .to_vec()
                     .into_boxed_slice())
             } else {
-                Err(HResultError::InvalidArgument as NativeHResult)
+                Err(Error::invalid_arg())
             }
         }
     }
@@ -121,7 +121,8 @@ pub struct VTL0MutPtr<T: Copy + Default> {
 }
 
 impl<T: Copy + Default> TryFrom<VTL0MutPtr<T>> for VTL1MutPtr<T> {
-    type Error = NativeHResult;
+    type Error = Error;
+
     fn try_from(value: VTL0MutPtr<T>) -> Result<Self, Self::Error> {
         if is_valid_vtl0(value.p as *const _, size_of::<T>()) {
             unsafe {
@@ -131,7 +132,7 @@ impl<T: Copy + Default> TryFrom<VTL0MutPtr<T>> for VTL1MutPtr<T> {
                 })
             }
         } else {
-            Err(HResultError::InvalidArgument as NativeHResult)
+            Err(Error::invalid_arg())
         }
     }
 }
@@ -150,6 +151,7 @@ where
 
 impl<T: ?Sized + Copy + Default> Deref for VTL1MutPtr<T> {
     type Target = T;
+
     fn deref(&self) -> &Self::Target {
         &self.vtl1_owned
     }

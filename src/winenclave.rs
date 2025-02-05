@@ -2,14 +2,18 @@ use core::mem::{offset_of, MaybeUninit};
 
 use alloc::vec::Vec;
 
-use windows_sys::Win32::System::Environment::{
-    EnclaveGetAttestationReport,
-    EnclaveGetEnclaveInformation,
-    EnclaveSealData,
-    EnclaveUnsealData,
-    ENCLAVE_IDENTITY,
-    ENCLAVE_INFORMATION
+use windows_sys::{
+    Win32::System::Environment::{
+        EnclaveGetAttestationReport,
+        EnclaveGetEnclaveInformation,
+        EnclaveSealData,
+        EnclaveUnsealData,
+        ENCLAVE_IDENTITY,
+        ENCLAVE_INFORMATION,
+    }
 };
+
+use crate::error::{CheckHResult, Error};
 
 pub const ENCLAVE_LONG_ID_LENGTH: usize = 32;
 pub const ENCLAVE_SHORT_ID_LENGTH: usize = 16;
@@ -71,28 +75,6 @@ pub enum HResultSuccess {
 }
 
 #[repr(u32)]
-pub enum HResultError {
-    InvalidArgument = 0x80070057,
-    InvalidState = 0x8007139f,
-    Unexpected = 0x8000ffff,
-}
-
-impl TryFrom<u32> for HResultError {
-    type Error = u32;
-    fn try_from(value: u32) -> Result<Self, Self::Error> {
-        match value {
-            x if x == HResultError::InvalidArgument as u32 => Ok(HResultError::InvalidArgument),
-            x if x == HResultError::InvalidState as u32 => Ok(HResultError::InvalidState),
-            x if x == HResultError::Unexpected as u32 => Ok(HResultError::Unexpected),
-            x => Err(x),
-        }
-    }
-}
-
-pub type NativeHResult = u32;
-pub type HResult = Result<HResultSuccess, NativeHResult>;
-
-#[repr(u32)]
 #[derive(Clone, Copy)]
 pub enum SealingIdentityPolicy {
     Invalid = 0,
@@ -113,7 +95,7 @@ pub enum SealingRuntimePolicy {
 
 pub fn get_attestation_report(
     enclave_data: Option<&[u8; ENCLAVE_REPORT_DATA_LENGTH]>,
-) -> Result<Vec<u8>, NativeHResult> {
+) -> Result<Vec<u8>, Error> {
     let mut output_size: u32 = 0;
     let mut report: Vec<u8> = Vec::new();
     let data = if let Some(v) = enclave_data {
@@ -122,61 +104,62 @@ pub fn get_attestation_report(
         core::ptr::null()
     };
 
-    unsafe {
-        match EnclaveGetAttestationReport(
+    let hr = unsafe {
+        EnclaveGetAttestationReport(
             data,
             core::ptr::null_mut(),
             0,
             &mut output_size,
-        ) {
-            0 => {}
-            e => return Err(e as u32),
-        }
-    }
+        )
+    };
+    hr.check()?;
 
     report.resize(output_size as usize, 0);
 
-    unsafe {
-        match EnclaveGetAttestationReport(
+    let hr = unsafe {
+        EnclaveGetAttestationReport(
             data,
             report.as_mut_ptr() as *mut _,
             report.len() as u32,
             &mut output_size,
-        ) {
-            0 => {}
-            e => return Err(e as u32),
-        }
-    }
+        )
+    };
+    hr.check()?;
 
     Ok(report)
 }
 
-pub fn get_enclave_information() -> Result<ENCLAVE_INFORMATION, NativeHResult> {
+pub fn get_enclave_information() -> Result<ENCLAVE_INFORMATION, Error> {
     let mut info = MaybeUninit::zeroed();
-    unsafe {
-        match EnclaveGetEnclaveInformation(
+    let hr = unsafe {
+        EnclaveGetEnclaveInformation(
             size_of::<ENCLAVE_INFORMATION>() as u32,
             info.as_mut_ptr(),
-        ) {
-            0 => Ok(info.assume_init()),
-            e => Err(e as u32),
-        }
-    }
+        )
+    };
+    hr.check()?;
+
+    let info = unsafe {
+        // SAFETY: only reachable if above HResult check passes.
+        info.assume_init()
+    };
+
+    Ok(info)
 }
 
 pub fn seal_data(
     data: &[u8],
     identity_policy: SealingIdentityPolicy,
     runtime_policy: SealingRuntimePolicy
-) -> Result<Vec<u8>, NativeHResult> {
+) -> Result<Vec<u8>, Error> {
     let Ok(data_to_encrypt_size) = u32::try_from(data.len()) else {
-        return Err(HResultError::InvalidArgument as u32);
+        return Err(Error::invalid_arg());
     };
 
     let mut output_size: u32 = 0;
 
-    unsafe {
-        match EnclaveSealData(
+    let hr = unsafe {
+        EnclaveSealData(
             data.as_ptr() as _,
             data_to_encrypt_size,
             identity_policy as i32,
@@ -184,17 +167,15 @@ pub fn seal_data(
             core::ptr::null_mut(),
             0,
             &mut output_size
-        ) {
-            0 => {}
-            e => return Err(e as u32),
-        }
-    }
+        )
+    };
+    hr.check()?;
 
     let mut sealed_data = Vec::new();
     sealed_data.resize(output_size as usize, 0);
 
-    unsafe {
-        match EnclaveSealData(
+    let hr = unsafe {
+        EnclaveSealData(
             data.as_ptr() as _,
             data_to_encrypt_size,
             identity_policy as i32,
@@ -202,18 +183,16 @@ pub fn seal_data(
             sealed_data.as_mut_ptr() as _,
             sealed_data.len() as u32,
             &mut output_size
-        ) {
-            0 => {}
-            e => return Err(e as u32),
-        }
-    }
+        )
+    };
+    hr.check()?;
 
     Ok(sealed_data)
 }
 
-pub fn unseal_data(data: &[u8], sealing_identity: Option<&mut ENCLAVE_IDENTITY>, unsealing_flags: Option<u32>) -> Result<Vec<u8>, NativeHResult> {
+pub fn unseal_data(data: &[u8], sealing_identity: Option<&mut ENCLAVE_IDENTITY>, unsealing_flags: Option<u32>) -> Result<Vec<u8>, Error> {
     let Ok(data_to_decrypt_len) = u32::try_from(data.len()) else {
-        return Err(HResultError::InvalidArgument as u32);
+        return Err(Error::invalid_arg());
     };
 
     let sealingidentity = if let Some(v) = sealing_identity {
@@ -230,8 +209,8 @@ pub fn unseal_data(data: &[u8], sealing_identity: Option<&mut ENCLAVE_IDENTITY>,
 
     let mut decrypted_data_size = 0u32;
 
-    unsafe {
-        match EnclaveUnsealData(
+    let hr = unsafe {
+        EnclaveUnsealData(
             data.as_ptr() as _,
             data_to_decrypt_len,
             core::ptr::null_mut(),
@@ -239,17 +218,15 @@ pub fn unseal_data(data: &[u8], sealing_identity: Option<&mut ENCLAVE_IDENTITY>,
             &mut decrypted_data_size as _,
             sealingidentity,
             unsealingflags
-        ) {
-            0 => {}
-            e => return Err(e as u32),
-        }
-    }
+        )
+    };
+    hr.check()?;
 
     let mut decrypted_data: Vec<u8> = Vec::new();
     decrypted_data.resize(decrypted_data_size as usize, 0);
 
-    unsafe {
-        match EnclaveUnsealData(
+    let hr = unsafe {
+        EnclaveUnsealData(
             data.as_ptr() as _,
             data_to_decrypt_len,
             decrypted_data.as_mut_ptr() as _,
@@ -257,11 +234,9 @@ pub fn unseal_data(data: &[u8], sealing_identity: Option<&mut ENCLAVE_IDENTITY>,
             &mut decrypted_data_size as _,
             sealingidentity,
             unsealingflags
-        ) {
-            0 => {}
-            e => return Err(e as u32),
-        }
-    }
+        )
+    };
+    hr.check()?;
 
     Ok(decrypted_data)
 }
