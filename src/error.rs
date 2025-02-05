@@ -1,5 +1,6 @@
-use windows_sys::Win32::Foundation::E_INVALIDARG;
 pub use windows_sys::core::HRESULT;
+use windows_sys::Win32::Foundation::E_INVALIDARG;
+pub use windows_sys::Win32::Foundation::S_OK;
 
 #[allow(private_bounds)]
 pub(crate) trait CheckHResult: Sealed {
