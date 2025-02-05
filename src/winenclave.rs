@@ -11,6 +11,8 @@ use windows_sys::Win32::System::Environment::{
     ENCLAVE_INFORMATION
 };
 
+use crate::{HResultError, NativeHResult};
+
 pub const ENCLAVE_LONG_ID_LENGTH: usize = 32;
 pub const ENCLAVE_SHORT_ID_LENGTH: usize = 16;
 
@@ -65,34 +67,6 @@ pub const IMAGE_ENCLAVE_MINIMUM_CONFIG_SIZE: u32 =
     offset_of!(ImageEnclaveConfig, enclave_flags) as u32;
 
 #[repr(u32)]
-pub enum HResultSuccess {
-    Ok = 0,
-    False = 1,
-}
-
-#[repr(u32)]
-pub enum HResultError {
-    InvalidArgument = 0x80070057,
-    InvalidState = 0x8007139f,
-    Unexpected = 0x8000ffff,
-}
-
-impl TryFrom<u32> for HResultError {
-    type Error = u32;
-    fn try_from(value: u32) -> Result<Self, Self::Error> {
-        match value {
-            x if x == HResultError::InvalidArgument as u32 => Ok(HResultError::InvalidArgument),
-            x if x == HResultError::InvalidState as u32 => Ok(HResultError::InvalidState),
-            x if x == HResultError::Unexpected as u32 => Ok(HResultError::Unexpected),
-            x => Err(x),
-        }
-    }
-}
-
-pub type NativeHResult = u32;
-pub type HResult = Result<HResultSuccess, NativeHResult>;
-
-#[repr(u32)]
 #[derive(Clone, Copy)]
 pub enum SealingIdentityPolicy {
     Invalid = 0,
@@ -130,7 +104,7 @@ pub fn get_attestation_report(
             &mut output_size,
         ) {
             0 => {}
-            e => return Err(e as u32),
+            e => return Err(e),
         }
     }
 
@@ -144,7 +118,7 @@ pub fn get_attestation_report(
             &mut output_size,
         ) {
             0 => {}
-            e => return Err(e as u32),
+            e => return Err(e),
         }
     }
 
@@ -159,7 +133,7 @@ pub fn get_enclave_information() -> Result<ENCLAVE_INFORMATION, NativeHResult> {
             info.as_mut_ptr(),
         ) {
             0 => Ok(info.assume_init()),
-            e => Err(e as u32),
+            e => Err(e),
         }
     }
 }
@@ -170,7 +144,7 @@ pub fn seal_data(
     runtime_policy: SealingRuntimePolicy
 ) -> Result<Vec<u8>, NativeHResult> {
     let Ok(data_to_encrypt_size) = u32::try_from(data.len()) else {
-        return Err(HResultError::InvalidArgument as u32);
+        return Err(HResultError::InvalidArgument as NativeHResult);
     };
 
     let mut output_size: u32 = 0;
@@ -186,7 +160,7 @@ pub fn seal_data(
             &mut output_size
         ) {
             0 => {}
-            e => return Err(e as u32),
+            e => return Err(e),
         }
     }
 
@@ -204,7 +178,7 @@ pub fn seal_data(
             &mut output_size
         ) {
             0 => {}
-            e => return Err(e as u32),
+            e => return Err(e),
         }
     }
 
@@ -213,7 +187,7 @@ pub fn seal_data(
 
 pub fn unseal_data(data: &[u8], sealing_identity: Option<&mut ENCLAVE_IDENTITY>, unsealing_flags: Option<u32>) -> Result<Vec<u8>, NativeHResult> {
     let Ok(data_to_decrypt_len) = u32::try_from(data.len()) else {
-        return Err(HResultError::InvalidArgument as u32);
+        return Err(HResultError::InvalidArgument as NativeHResult);
     };
 
     let sealingidentity = if let Some(v) = sealing_identity {
@@ -241,7 +215,7 @@ pub fn unseal_data(data: &[u8], sealing_identity: Option<&mut ENCLAVE_IDENTITY>,
             unsealingflags
         ) {
             0 => {}
-            e => return Err(e as u32),
+            e => return Err(e),
         }
     }
 
@@ -259,7 +233,7 @@ pub fn unseal_data(data: &[u8], sealing_identity: Option<&mut ENCLAVE_IDENTITY>,
             unsealingflags
         ) {
             0 => {}
-            e => return Err(e as u32),
+            e => return Err(e),
         }
     }
 

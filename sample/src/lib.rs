@@ -3,9 +3,11 @@
 use hex_literal::hex;
 
 use vbs_enclave::types::VTL0Ptr;
+use vbs_enclave::{HResult, HResultError, HResultSuccess, NativeHResult};
 use vbs_enclave::winenclave::{
-    HResult, HResultError, HResultSuccess, ImageEnclaveConfig, NativeHResult,
-    IMAGE_ENCLAVE_FLAG_PRIMARY_IMAGE, IMAGE_ENCLAVE_MINIMUM_CONFIG_SIZE,
+    ImageEnclaveConfig,
+    IMAGE_ENCLAVE_FLAG_PRIMARY_IMAGE,
+    IMAGE_ENCLAVE_MINIMUM_CONFIG_SIZE,
 };
 
 #[cfg(debug_assertions)]
@@ -58,17 +60,17 @@ extern "C" fn my_enclave_function(param: VTL0Ptr<MyEnclaveParams>) -> NativeHRes
     // };
 
     match my_enclave_function_safe(&mut params) {
-        Ok(s) => s as NativeHResult,
+        Ok(s) => s,
         Err(e) => e,
     }
 }
 
 fn my_enclave_function_safe(params: &mut VTL1MyEnclaveParams) -> HResult {
     if params.a + params.b != params.c {
-        return Err(HResultError::InvalidState as NativeHResult);
+        return Err(HResultError::InvalidState as _);
     }
 
     *params.e = params.d.iter().sum();
 
-    Ok(HResultSuccess::Ok)
+    Ok(HResultSuccess::Ok as _)
 }

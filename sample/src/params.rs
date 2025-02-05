@@ -1,5 +1,6 @@
 extern crate alloc;
 use alloc::boxed::Box;
+use vbs_enclave::NativeHResult;
 use vbs_enclave::types::{
     VTL0Array, VTL0MutPtr, VTL0Ptr, VTL1Clonable, VTL1ClonableArray, VTL1MutPtr,
 };
@@ -38,7 +39,7 @@ pub struct VTL1MyEnclaveParams {
 }
 
 impl TryFrom<VTL0Ptr<MyEnclaveParams>> for VTL1MyEnclaveParams {
-    type Error = u32;
+    type Error = NativeHResult;
     fn try_from(value: VTL0Ptr<MyEnclaveParams>) -> Result<Self, Self::Error> {
         let vtl1_clone = value.clone_into_vtl1()?;
         let c: u32 = vtl1_clone.c.clone_into_vtl1()?;

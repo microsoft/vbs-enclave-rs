@@ -4,7 +4,8 @@ use alloc::{boxed::Box, slice};
 
 use crate::{
     is_valid_vtl0,
-    winenclave::{HResultError, NativeHResult},
+    HResultError,
+    NativeHResult
 };
 
 pub trait VTL1Clonable<T: Copy> {
