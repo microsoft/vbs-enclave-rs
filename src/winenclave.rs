@@ -2,15 +2,9 @@ use core::mem::{offset_of, MaybeUninit};
 
 use alloc::vec::Vec;
 
-use windows_sys::{
-    Win32::System::Environment::{
-        EnclaveGetAttestationReport,
-        EnclaveGetEnclaveInformation,
-        EnclaveSealData,
-        EnclaveUnsealData,
-        ENCLAVE_IDENTITY,
-        ENCLAVE_INFORMATION,
-    }
+use windows_sys::Win32::System::Environment::{
+    EnclaveGetAttestationReport, EnclaveGetEnclaveInformation, EnclaveSealData, EnclaveUnsealData,
+    ENCLAVE_IDENTITY, ENCLAVE_INFORMATION,
 };
 
 use crate::error::{check_hr, EnclaveError};
@@ -104,14 +98,8 @@ pub fn get_attestation_report(
         core::ptr::null()
     };
 
-    let hr = unsafe {
-        EnclaveGetAttestationReport(
-            data,
-            core::ptr::null_mut(),
-            0,
-            &mut output_size,
-        )
-    };
+    let hr =
+        unsafe { EnclaveGetAttestationReport(data, core::ptr::null_mut(), 0, &mut output_size) };
     check_hr(hr)?;
 
     report.resize(output_size as usize, 0);
@@ -132,10 +120,7 @@ pub fn get_attestation_report(
 pub fn get_enclave_information() -> Result<ENCLAVE_INFORMATION, EnclaveError> {
     let mut info = MaybeUninit::zeroed();
     let hr = unsafe {
-        EnclaveGetEnclaveInformation(
-            size_of::<ENCLAVE_INFORMATION>() as u32,
-            info.as_mut_ptr(),
-        )
+        EnclaveGetEnclaveInformation(size_of::<ENCLAVE_INFORMATION>() as u32, info.as_mut_ptr())
     };
     check_hr(hr)?;
 
@@ -150,7 +135,7 @@ pub fn get_enclave_information() -> Result<ENCLAVE_INFORMATION, EnclaveError> {
 pub fn seal_data(
     data: &[u8],
     identity_policy: SealingIdentityPolicy,
-    runtime_policy: SealingRuntimePolicy
+    runtime_policy: SealingRuntimePolicy,
 ) -> Result<Vec<u8>, EnclaveError> {
     let Ok(data_to_encrypt_size) = u32::try_from(data.len()) else {
         return Err(EnclaveError::invalid_arg());
@@ -166,7 +151,7 @@ pub fn seal_data(
             runtime_policy as u32,
             core::ptr::null_mut(),
             0,
-            &mut output_size
+            &mut output_size,
         )
     };
     check_hr(hr)?;
@@ -182,7 +167,7 @@ pub fn seal_data(
             runtime_policy as u32,
             sealed_data.as_mut_ptr() as _,
             sealed_data.len() as u32,
-            &mut output_size
+            &mut output_size,
         )
     };
     check_hr(hr)?;
@@ -190,7 +175,11 @@ pub fn seal_data(
     Ok(sealed_data)
 }
 
-pub fn unseal_data(data: &[u8], sealing_identity: Option<&mut ENCLAVE_IDENTITY>, unsealing_flags: Option<u32>) -> Result<Vec<u8>, EnclaveError> {
+pub fn unseal_data(
+    data: &[u8],
+    sealing_identity: Option<&mut ENCLAVE_IDENTITY>,
+    unsealing_flags: Option<u32>,
+) -> Result<Vec<u8>, EnclaveError> {
     let Ok(data_to_decrypt_len) = u32::try_from(data.len()) else {
         return Err(EnclaveError::invalid_arg());
     };
@@ -217,7 +206,7 @@ pub fn unseal_data(data: &[u8], sealing_identity: Option<&mut ENCLAVE_IDENTITY>,
             0,
             &mut decrypted_data_size as _,
             sealingidentity,
-            unsealingflags
+            unsealingflags,
         )
     };
     check_hr(hr)?;
@@ -233,7 +222,7 @@ pub fn unseal_data(data: &[u8], sealing_identity: Option<&mut ENCLAVE_IDENTITY>,
             decrypted_data.len() as u32,
             &mut decrypted_data_size as _,
             sealingidentity,
-            unsealingflags
+            unsealingflags,
         )
     };
     check_hr(hr)?;

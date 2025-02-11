@@ -45,19 +45,20 @@ mod params;
 use params::*;
 
 #[no_mangle]
-extern "C" fn my_enclave_function(param: VTL0Ptr<MyEnclaveParams>) -> HRESULT {
-    let mut params = match param.try_into() {
+extern "C" fn my_enclave_function(params: *const MyEnclaveParams) -> HRESULT {
+    let params_vtl0 = unsafe {
+        match VTL0Ptr::new(params) {
+            Ok(p) => p,
+            Err(e) => return HRESULT::from(e),
+        }
+    };
+
+    let mut params_vtl1: VTL1MyEnclaveParams = match params_vtl0.try_into() {
         Ok(p) => p,
         Err(e) => return HRESULT::from(e),
     };
 
-    // Alternatively, if you want typing explicit:
-    // let mut params = match VTL1MyEnclaveParams::try_from(param) {
-    //     Ok(p) => p,
-    //     Err(e) => return e,
-    // };
-
-    match my_enclave_function_safe(&mut params) {
+    match my_enclave_function_safe(&mut params_vtl1) {
         Ok(()) => S_OK,
         Err(e) => e.into(),
     }

@@ -3,6 +3,7 @@ use core::ffi::c_void;
 use core::ptr;
 
 mod allocator;
+pub mod enclaveapi;
 pub mod error;
 pub mod types;
 pub mod winenclave;
@@ -25,12 +26,16 @@ static ENCLAVE_BASE: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
 static ENCLAVE_END: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
 
 pub fn is_valid_vtl0(base: *const c_void, size: usize) -> bool {
+    !base.is_null() && is_valid_vtl0_or_null(base, size)
+}
+
+pub fn is_valid_vtl0_or_null(base: *const c_void, size: usize) -> bool {
     let enclave_base = ENCLAVE_BASE.load(Ordering::Relaxed) as *const _;
     let enclave_end = ENCLAVE_END.load(Ordering::Relaxed) as *const _;
 
     let end = base.wrapping_byte_add(size);
 
-    !base.is_null() && ((end < enclave_base) || (enclave_end <= base))
+    (end < enclave_base) || (enclave_end <= base)
 }
 
 #[no_mangle]
