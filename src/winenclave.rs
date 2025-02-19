@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 
 use windows_sys::Win32::System::Environment::{
     EnclaveGetAttestationReport, EnclaveGetEnclaveInformation, EnclaveSealData, EnclaveUnsealData,
-    ENCLAVE_IDENTITY, ENCLAVE_INFORMATION,
+    ENCLAVE_IDENTITY, ENCLAVE_INFORMATION, ENCLAVE_REPORT_DATA_LENGTH,
 };
 
 use crate::error::{check_hr, EnclaveError};
@@ -22,8 +22,6 @@ pub const ENCLAVE_FLAG_FULL_DEBUG_ENABLED: u32 = 0x0000_0001;
 pub const ENCLAVE_FLAG_DYNAMIC_DEBUG_ENABLED: u32 = 0x0000_0002;
 
 pub const ENCLAVE_FLAG_DYNAMIC_DEBUG_ACTIVE: u32 = 0x0000_0004;
-
-pub const ENCLAVE_REPORT_DATA_LENGTH: usize = 64;
 
 // struct _IMAGE_ENCLAVE_CONFIG64 {
 //     DWORD Size;
@@ -88,7 +86,7 @@ pub enum SealingRuntimePolicy {
 }
 
 pub fn get_attestation_report(
-    enclave_data: Option<&[u8; ENCLAVE_REPORT_DATA_LENGTH]>,
+    enclave_data: Option<&[u8; ENCLAVE_REPORT_DATA_LENGTH as usize]>,
 ) -> Result<Vec<u8>, EnclaveError> {
     let mut output_size: u32 = 0;
     let mut report: Vec<u8> = Vec::new();

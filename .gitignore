@@ -1,2 +1,5 @@
 **/target
 Cargo.lock
+.vs
+**/x64
+*.vcxproj.user

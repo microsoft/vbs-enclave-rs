@@ -16,3 +16,12 @@ panic = "abort"
 [dependencies]
 vbs-enclave = { path = ".." }
 hex-literal = "0.4.1"
+spin = "0.9.8"
+
+[dependencies.windows-sys]
+version = "0.59.0"
+features = [
+    "Win32_System_Environment",
+    "Win32_Security_Cryptography",
+    "Win32_Foundation"
+]
