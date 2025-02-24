@@ -3,21 +3,14 @@
 #include <iostream>
 #include <string>
 
-const uint8_t OwnerId[IMAGE_ENCLAVE_LONG_ID_LENGTH] = {0x10, 0x20, 0x30, 0x40, 0x41, 0x31, 0x21, 0x11};
+// These suppress some warnings for casting LPVOID to HRESULT
+// and other truncation type issues when passing parameters and
+// return values back from CallEnclave.
+#pragma warning (disable : 4311)
+#pragma warning (disable : 4302)
+#pragma warning (disable : 4267)
 
-// template<typename T>
-// struct VTL0Array {
-//	_In_ T* arr;
-//	_In_ size_t count;
-// };
-//
-// struct MyEnclaveParams {
-//	_In_ uint32_t a;
-//	_In_ uint32_t b;
-//	_In_ uint32_t* c;
-//	_In_ VTL0Array<uint32_t> d;
-//	_Out_ uint32_t* e;
-// };
+const uint8_t OwnerId[IMAGE_ENCLAVE_LONG_ID_LENGTH] = {0x10, 0x20, 0x30, 0x40, 0x41, 0x31, 0x21, 0x11};
 
 struct NewKeypairParams
 {
@@ -138,13 +131,13 @@ int wmain(int argc, wchar_t **argv)
 
 	std::cout << "Rust enclave created and initialized!" << std::endl;
 
-	PENCLAVE_ROUTINE new_keypair_v1 = (PENCLAVE_ROUTINE)GetProcAddress((HMODULE)enclave_base, "new_keypair_v1");
-	PENCLAVE_ROUTINE generate_report_v1 = (PENCLAVE_ROUTINE)GetProcAddress((HMODULE)enclave_base, "generate_report_v1");
-	PENCLAVE_ROUTINE decrypt_data_v1 = (PENCLAVE_ROUTINE)GetProcAddress((HMODULE)enclave_base, "decrypt_data_v1");
+	PENCLAVE_ROUTINE new_keypair = (PENCLAVE_ROUTINE)GetProcAddress((HMODULE)enclave_base, "new_keypair");
+	PENCLAVE_ROUTINE generate_report = (PENCLAVE_ROUTINE)GetProcAddress((HMODULE)enclave_base, "generate_report");
+	PENCLAVE_ROUTINE decrypt_data = (PENCLAVE_ROUTINE)GetProcAddress((HMODULE)enclave_base, "decrypt_data");
 
-	std::cout << "my_enclave_function is " << std::hex << new_keypair_v1 << std::endl;
-	std::cout << "generate_report_v1 is " << std::hex << generate_report_v1 << std::endl;
-	std::cout << "decrypt_data_v1 is " << std::hex << decrypt_data_v1 << std::endl;
+	std::cout << "new_keypair is " << std::hex << new_keypair << std::endl;
+	std::cout << "generate_report is " << std::hex << generate_report << std::endl;
+	std::cout << "decrypt_data is " << std::hex << decrypt_data << std::endl;
 
 	BCRYPT_KEY_HANDLE keypair = nullptr;
 
@@ -211,9 +204,9 @@ int wmain(int argc, wchar_t **argv)
 	NewKeypairParams new_keypair_params = NewKeypairParams{256, my_public_key_blob};
 	LPVOID result = nullptr;
 
-	if (!CallEnclave(new_keypair_v1, &new_keypair_params, TRUE, &result) || (HRESULT)result != S_OK)
+	if (!CallEnclave(new_keypair, &new_keypair_params, TRUE, &result) || (HRESULT)result != S_OK)
 	{
-		std::cerr << "new_keypair_v1 failed: " << std::hex << (HRESULT)result << std::endl;
+		std::cerr << "new_keypair failed: " << std::hex << (HRESULT)result << std::endl;
 		return (HRESULT)result;
 	}
 
@@ -221,9 +214,9 @@ int wmain(int argc, wchar_t **argv)
 
 	GenerateReportParams generate_report_params = GenerateReportParams{AllocateCallback};
 
-	if (!CallEnclave(generate_report_v1, &generate_report_params, TRUE, &result) || (HRESULT)result != S_OK)
+	if (!CallEnclave(generate_report, &generate_report_params, TRUE, &result) || (HRESULT)result != S_OK)
 	{
-		std::cerr << "generate_report_v1 failed: " << std::hex << (HRESULT)result << std::endl;
+		std::cerr << "generate_report failed: " << std::hex << (HRESULT)result << std::endl;
 		return (HRESULT)result;
 	}
 
@@ -372,9 +365,9 @@ int wmain(int argc, wchar_t **argv)
 
 	DecryptDataParams decrypt_data_params = { AllocateCallback, bytes_needed, ciphertext, mode_info.cbTag, mode_info.pbTag };
 
-	if (!CallEnclave(decrypt_data_v1, &decrypt_data_params, TRUE, &result) || (HRESULT)result != S_OK)
+	if (!CallEnclave(decrypt_data, &decrypt_data_params, TRUE, &result) || (HRESULT)result != S_OK)
 	{
-		std::cerr << "decrypt_data_v1 failed: " << std::hex << (HRESULT)result << std::endl;
+		std::cerr << "decrypt_data failed: " << std::hex << (HRESULT)result << std::endl;
 		return (HRESULT)result;
 	}
 
