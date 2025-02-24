@@ -1,7 +1,9 @@
 use alloc::vec::Vec;
 use hex_literal::hex;
+use vbs_enclave::enclaveapi::call_enclave;
 use vbs_enclave::error::{EnclaveError, HRESULT, S_OK};
 use vbs_enclave::is_valid_vtl0;
+use vbs_enclave::types::LPENCLAVE_ROUTINE;
 use vbs_enclave::winenclave::{
     ImageEnclaveConfig, IMAGE_ENCLAVE_FLAG_PRIMARY_IMAGE, IMAGE_ENCLAVE_MINIMUM_CONFIG_SIZE,
 };
@@ -81,7 +83,7 @@ extern "C" fn new_keypair(params_vtl0: *const NewKeypairParams) -> HRESULT {
 
 #[no_mangle]
 extern "C" fn generate_report(params_vtl0: *mut GenerateReportParams) -> HRESULT {
-    let mut params_vtl1 = unsafe {
+    let params_vtl1 = unsafe {
         if is_valid_vtl0(params_vtl0 as *const _, size_of::<GenerateReportParams>()) {
             *params_vtl0.clone()
         } else {
@@ -93,13 +95,33 @@ extern "C" fn generate_report(params_vtl0: *mut GenerateReportParams) -> HRESULT
         return EnclaveError::invalid_arg().into();
     }
 
-    if let Err(e) = generate_report_internal(&mut params_vtl1) {
+    let report = match generate_report_internal() {
+        Ok(v) => v,
+        Err(e) => return e.into()
+    };
+
+    let mut allocation: *mut u8 = core::ptr::null_mut();
+    if let Err(e) = call_enclave(
+        params_vtl1.allocate_callback as LPENCLAVE_ROUTINE,
+        report.len() as *mut _,
+        true,
+        &mut allocation as *mut *mut u8 as *mut *mut _,
+    ) {
         return e.into();
+    };
+
+    if is_valid_vtl0(allocation as *const _, report.len()) {
+        unsafe {
+            let data_vtl0: &mut [u8] = core::slice::from_raw_parts_mut(allocation, report.len());
+            data_vtl0.copy_from_slice(&report);
+        }
+    } else {
+        return EnclaveError::invalid_arg().into();
     }
 
     unsafe {
-        (*params_vtl0).report_size = params_vtl1.report_size;
-        (*params_vtl0).report = params_vtl1.report;
+        (*params_vtl0).report_size = report.len();
+        (*params_vtl0).report = allocation;
     }
 
     S_OK
@@ -107,58 +129,77 @@ extern "C" fn generate_report(params_vtl0: *mut GenerateReportParams) -> HRESULT
 
 #[no_mangle]
 extern "C" fn decrypt_data(params_vtl0: *mut DecryptDataParams) -> HRESULT {
-    let mut params_vtl1 = unsafe {
-        if is_valid_vtl0(params_vtl0 as *const _, size_of::<DecryptDataParams>()) {
-            *params_vtl0.clone()
-        } else {
-            return EnclaveError::invalid_arg().into();
-        }
+    let params_vtl1 = if is_valid_vtl0(params_vtl0 as *const _, size_of::<DecryptDataParams>()) {
+        unsafe { *params_vtl0.clone() }
+    } else {
+        return EnclaveError::invalid_arg().into();
     };
 
     let mut encrypted_data: Vec<u8> = Vec::new();
     encrypted_data.resize(params_vtl1.encrypted_size, 0u8);
 
-    unsafe {
-        if is_valid_vtl0(
-            (&params_vtl1).encrypted_data as *const u8 as *const _,
-            (&params_vtl1).encrypted_size,
-        ) {
+    if is_valid_vtl0(
+        (&params_vtl1).encrypted_data as *const u8 as *const _,
+        (&params_vtl1).encrypted_size,
+    ) {
+        unsafe {
             encrypted_data
                 .as_mut_slice()
                 .copy_from_slice(core::slice::from_raw_parts(
                     params_vtl1.encrypted_data,
                     params_vtl1.encrypted_size,
                 ));
-        } else {
-            return EnclaveError::invalid_arg().into();
         }
+    } else {
+        return EnclaveError::invalid_arg().into();
     }
 
     let mut tag: Vec<u8> = Vec::new();
     tag.resize(params_vtl1.tag_size, 0u8);
 
-    unsafe {
-        if is_valid_vtl0(
-            (&params_vtl1).tag as *const u8 as *const _,
-            (&params_vtl1).tag_size,
-        ) {
+    if is_valid_vtl0(
+        (&params_vtl1).tag as *const u8 as *const _,
+        (&params_vtl1).tag_size,
+    ) {
+        unsafe {
             tag.as_mut_slice()
                 .copy_from_slice(core::slice::from_raw_parts(
                     params_vtl1.tag,
                     params_vtl1.tag_size,
                 ));
-        } else {
-            return EnclaveError::invalid_arg().into();
         }
+    } else {
+        return EnclaveError::invalid_arg().into();
     }
 
-    if let Err(e) = decrypt_data_internal(&mut params_vtl1, &encrypted_data, &mut tag) {
+    let decrypted_data = match decrypt_data_internal(&encrypted_data, &mut tag) {
+        Ok(v) => v,
+        Err(e) => return e.into(),
+    };
+
+    let mut allocation: *mut u8 = core::ptr::null_mut();
+    if let Err(e) = call_enclave(
+        params_vtl1.allocate_callback as LPENCLAVE_ROUTINE,
+        decrypted_data.len() as *mut _,
+        true,
+        &mut allocation as *mut *mut u8 as *mut *mut _,
+    ) {
         return e.into();
     }
 
+    if is_valid_vtl0(allocation as *const _, decrypted_data.len()) {
+        unsafe {
+            let data_vtl0: &mut [u8] =
+                core::slice::from_raw_parts_mut(allocation, decrypted_data.len());
+            data_vtl0.copy_from_slice(&decrypted_data);
+        }
+    } else {
+        return EnclaveError::invalid_arg().into();
+    }
+
     unsafe {
-        (*params_vtl0).decrypted_size = params_vtl1.decrypted_size;
-        (*params_vtl0).decrypted_data = params_vtl1.decrypted_data;
+        (*params_vtl0).decrypted_size = decrypted_data.len();
+        (*params_vtl0).decrypted_data = allocation;
     }
 
     S_OK

@@ -6,12 +6,11 @@ use alloc::vec::Vec;
 
 use spin::Mutex;
 use vbs_enclave::{
-    enclaveapi::call_enclave, error::EnclaveError, is_valid_vtl0, types::LPENCLAVE_ROUTINE,
-    winenclave::get_attestation_report,
+    error::EnclaveError, winenclave::get_attestation_report,
 };
 
 mod params;
-use params::{DecryptDataParams, GenerateReportParams, NewKeypairParams};
+use params::NewKeypairParams;
 use windows_sys::Win32::{
     Foundation::STATUS_SUCCESS,
     Security::Cryptography::{
@@ -174,7 +173,7 @@ fn new_keypair_internal(
     }
 }
 
-fn generate_report_internal(params: &mut GenerateReportParams) -> Result<(), EnclaveError> {
+fn generate_report_internal() -> Result<Vec<u8>, EnclaveError> {
     let keypair = *KEYPAIR.lock() as BCRYPT_KEY_HANDLE;
     let mut public_key_blob: Vec<u8> = Vec::new();
 
@@ -219,36 +218,10 @@ fn generate_report_internal(params: &mut GenerateReportParams) -> Result<(), Enc
     let mut data = [0u8; ENCLAVE_REPORT_DATA_LENGTH as usize];
     data.copy_from_slice(public_key_blob.split_at(size_of::<BCRYPT_ECCKEY_BLOB>()).1);
 
-    let report = get_attestation_report(Some(&data))?;
-
-    let mut allocation: *mut u8 = core::ptr::null_mut();
-    unsafe {
-        call_enclave(
-            params.allocate_callback as LPENCLAVE_ROUTINE,
-            report.len() as *mut _,
-            true,
-            &mut allocation as *mut *mut u8 as *mut *mut c_void,
-        )?;
-
-        if is_valid_vtl0(allocation as *const _, report.len()) {
-            let data_vtl0: &mut [u8] = core::slice::from_raw_parts_mut(allocation, report.len());
-            data_vtl0.copy_from_slice(&report);
-        } else {
-            return Err(EnclaveError::invalid_arg());
-        }
-    }
-
-    params.report_size = report.len();
-    params.report = allocation;
-
-    Ok(())
+    get_attestation_report(Some(&data))
 }
 
-fn decrypt_data_internal(
-    params: &mut DecryptDataParams,
-    encrypted_data: &[u8],
-    tag: &mut [u8],
-) -> Result<(), EnclaveError> {
+fn decrypt_data_internal(encrypted_data: &[u8], tag: &mut [u8]) -> Result<Vec<u8>, EnclaveError> {
     let key = *KEY.lock() as BCRYPT_KEY_HANDLE;
 
     let mut iv = [0u8; 12];
@@ -309,30 +282,9 @@ fn decrypt_data_internal(
         )
     };
 
-    if status != STATUS_SUCCESS {
-        return Err(EnclaveError { hresult: status });
+    if status == STATUS_SUCCESS {
+        Ok(decrypted_data)
+    } else {
+        Err(EnclaveError { hresult: status })
     }
-
-    let mut allocation: *mut u8 = core::ptr::null_mut();
-    unsafe {
-        call_enclave(
-            params.allocate_callback as LPENCLAVE_ROUTINE,
-            decrypted_data.len() as *mut _,
-            true,
-            &mut allocation as *mut *mut u8 as *mut *mut c_void,
-        )?;
-
-        if is_valid_vtl0(allocation as *const _, decrypted_data.len()) {
-            let data_vtl0: &mut [u8] =
-                core::slice::from_raw_parts_mut(allocation, decrypted_data.len());
-            data_vtl0.copy_from_slice(&decrypted_data);
-        } else {
-            return Err(EnclaveError::invalid_arg());
-        }
-    }
-
-    params.decrypted_data = allocation;
-    params.decrypted_size = decrypted_data.len();
-
-    Ok(())
 }
