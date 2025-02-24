@@ -75,7 +75,7 @@ extern "C" fn new_keypair(params_vtl0: *const NewKeypairParams) -> HRESULT {
         return EnclaveError::invalid_arg().into();
     }
 
-    match new_keypair_internal(params_vtl1, &public_key_blob) {
+    match new_keypair_internal(params_vtl1.key_size, &public_key_blob) {
         Ok(()) => S_OK,
         Err(e) => e.into(),
     }
@@ -97,7 +97,7 @@ extern "C" fn generate_report(params_vtl0: *mut GenerateReportParams) -> HRESULT
 
     let report = match generate_report_internal() {
         Ok(v) => v,
-        Err(e) => return e.into()
+        Err(e) => return e.into(),
     };
 
     let mut allocation: *mut u8 = core::ptr::null_mut();

@@ -5,12 +5,8 @@ extern crate alloc;
 use alloc::vec::Vec;
 
 use spin::Mutex;
-use vbs_enclave::{
-    error::EnclaveError, winenclave::get_attestation_report,
-};
+use vbs_enclave::{error::EnclaveError, winenclave::get_attestation_report};
 
-mod params;
-use params::NewKeypairParams;
 use windows_sys::Win32::{
     Foundation::STATUS_SUCCESS,
     Security::Cryptography::{
@@ -27,6 +23,7 @@ use windows_sys::Win32::{
 };
 
 mod ffi;
+mod params;
 
 // A key handle is actually an alias of *const c_void but that
 // isn't considered thread safe. Since it's an opaque handle,
@@ -42,14 +39,10 @@ struct Aes256KeyBlob {
     key_material: [u8; AES256_KEY_SIZE],
 }
 
-fn new_keypair_internal(
-    params: NewKeypairParams,
-    public_key_blob: &[u8],
-) -> Result<(), EnclaveError> {
+fn new_keypair_internal(key_size: u32, public_key_blob: &[u8]) -> Result<(), EnclaveError> {
     let mut key_handle = core::ptr::null_mut::<c_void>();
     unsafe {
         let key_handle_ptr = &mut key_handle as *mut *mut c_void;
-        let key_size = params.key_size;
         if BCryptGenerateKeyPair(
             match key_size {
                 256 => BCRYPT_ECDH_P256_ALG_HANDLE,
@@ -78,7 +71,6 @@ fn new_keypair_internal(
 
     unsafe {
         let key_handle_ptr = &mut key_handle as *mut *mut c_void;
-        let key_size = params.key_size;
 
         if BCryptImportKeyPair(
             match key_size {
