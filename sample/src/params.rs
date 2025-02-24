@@ -1,5 +1,3 @@
-extern crate alloc;
-
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct NewKeypairParams {

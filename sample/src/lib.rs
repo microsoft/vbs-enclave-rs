@@ -43,7 +43,7 @@ struct Aes256KeyBlob {
     key_material: [u8; AES256_KEY_SIZE],
 }
 
-fn new_keypair_internal_v1(
+fn new_keypair_internal(
     params: NewKeypairParams,
     public_key_blob: &[u8],
 ) -> Result<(), EnclaveError> {
@@ -174,7 +174,7 @@ fn new_keypair_internal_v1(
     }
 }
 
-fn generate_report_internal_v1(params: &mut GenerateReportParams) -> Result<(), EnclaveError> {
+fn generate_report_internal(params: &mut GenerateReportParams) -> Result<(), EnclaveError> {
     let keypair = *KEYPAIR.lock() as BCRYPT_KEY_HANDLE;
     let mut public_key_blob: Vec<u8> = Vec::new();
 
@@ -244,7 +244,7 @@ fn generate_report_internal_v1(params: &mut GenerateReportParams) -> Result<(), 
     Ok(())
 }
 
-fn decrypt_data_internal_v1(
+fn decrypt_data_internal(
     params: &mut DecryptDataParams,
     encrypted_data: &[u8],
     tag: &mut [u8],
