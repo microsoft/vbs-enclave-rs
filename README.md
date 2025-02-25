@@ -8,7 +8,7 @@ This project is the result of a Microsoft Offensive Research & Security Engineer
 
 - Rustlang 1.86.0-nightly
 - Cargo
-- Visual Studio 2022 or Visual Studio Build Tools 2022
+- Visual Studio 2022
 - Windows 11 SDK (10.0.26100.0)
 
 It was tested on x86_64, but will probably build for arm64 with no issues.
