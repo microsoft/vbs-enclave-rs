@@ -327,11 +327,6 @@ BufferInfo EncryptMessage(BCRYPT_HANDLE ephemeral_key, std::wstring message, BCR
 	DumpBytes((uint8_t*)message.c_str(), message.size() * sizeof(wchar_t));
 	std::cout << std::endl;
 
-	uint8_t iv[12] = {};
-
-	mode_info.pbNonce = iv;
-	mode_info.cbNonce = sizeof(iv);
-
 	uint32_t bytes_needed = 0;
 
 	NTSTATUS status = BCryptEncrypt(
@@ -470,6 +465,11 @@ int wmain(int argc, wchar_t **argv)
 	
 	BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO mode_info{};
 	BCRYPT_INIT_AUTH_MODE_INFO(mode_info);
+
+	uint8_t iv[12] = {};
+	mode_info.pbNonce = iv;
+	mode_info.cbNonce = sizeof(iv);
+
 	uint8_t tag[16] = {};
 	mode_info.pbTag = tag;
 	mode_info.cbTag = sizeof(tag);
