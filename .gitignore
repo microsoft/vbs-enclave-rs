@@ -3,3 +3,4 @@ Cargo.lock
 .vs
 **/x64
 *.vcxproj.user
+**/packages
