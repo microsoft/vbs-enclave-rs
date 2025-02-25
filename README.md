@@ -1,14 +1,82 @@
-# Project
+# VBS Rust Enclave Example
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
+This proof-of-concept demonstrates how one can implement a Windows [Virtualization Based Security enclave](https://learn.microsoft.com/en-us/windows/win32/trusted-execution/vbs-enclaves) in Rust.
 
-As the maintainer of this project, please make a few updates:
+This project is the result of a Microsoft Offensive Research & Security Engineering (MORSE) hackathon.
 
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
+## Requirements
+
+- Rustlang 1.86.0-nightly
+- Cargo
+- Visual Studio 2022 or Visual Studio Build Tools 2022
+- Windows 11 SDK (10.0.26100.0)
+
+It was tested on x86_64, but will probably build for arm64 with no issues.
+
+## Building the `vbs-enclave` crate
+
+The `vbs-enclave` crate will build with `cargo build` just fine. However, this crate only builds an rlib and is not usable standalone, but there is a sample enclave using it provided.
+
+## Building the Sample
+
+### `SampleHost`
+
+The sample host executable, `SampleHost.exe` is a Visual Studio project. Ensure the configuration you select (Debug or Release) matches what you build the enclave DLL for.  
+
+### `sample-vbs-enclave-rs`
+
+Prior to building, follow the steps in the [VBS Enclaves Development Guide](https://learn.microsoft.com/en-us/windows/win32/trusted-execution/vbs-enclaves-dev-guide#step-3-signing-vbs-enclave-dlls) for configuring test signing.
+
+Once you have a test signing certificate created and have enabled test signing on the system that will run the example enclave, you can build the enclave itself from the Visual Studio command prompt:
+
+#### Debug build
+
+```
+cd sample
+cargo build
+veiid.exe .\target\debug\sample_vbs_enclave_rs.dll
+
+# Replace "MyTestEnclaveCert" with your test signing certificate's name
+signtool.exe sign /ph /fd SHA256 /n "MyTestEnclaveCert" target\debug\sample_vbs_enclave_rs.dll
+```
+
+#### Release build
+
+```
+cd sample
+cargo build -r
+veiid.exe .\target\release\sample_vbs_enclave_rs.dll
+
+# Replace "MyTestEnclaveCert" with your test signing certificate's name
+signtool.exe sign /ph /fd SHA256 /n "MyTestEnclaveCert" target\release\sample_vbs_enclave_rs.dll
+```
+
+## Running the sample
+
+Once you have the sample host and enclave executables, you can launch it like so, with this example output:
+
+```
+C:\> .\SampleHost.exe .\sample_vbs_enclave_rs.dll "Hello World"
+Rust enclave created and initialized!
+new_keypair is 000002AA41DEEA20
+generate_report is 000002AA41DEEC00
+decrypt_data is 000002AA41DEEFF0
+Creating new enclave key and providing host public key...
+New keypair created!
+Report generated! 1240 bytes!
+Beep boop beep, validating attestation report... (for pretend)
+Enclave is validated!
+Public key imported successfully!
+Successfully derived shared ephemeral key!
+Encrypting the message:
+48 00 65 00 6c 00 6c 00 6f 00 20 00 57 00 6f 00 H.e.l.l.o...W.o.
+72 00 6c 00 64 00                               r.l.d.
+
+Message successfully encrypted! Sending to enclave to decrypt...
+Data decrypted! Message is:
+48 00 65 00 6c 00 6c 00 6f 00 20 00 57 00 6f 00 H.e.l.l.o...W.o.
+72 00 6c 00 64 00                               r.l.d.
+```
 
 ## Contributing
 
