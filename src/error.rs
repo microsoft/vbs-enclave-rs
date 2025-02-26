@@ -10,7 +10,7 @@ pub(crate) fn check_hr(hresult: HRESULT) -> Result<(), EnclaveError> {
     }
 }
 
-fn hresult_from_win32(e: u32) -> HRESULT {
+pub fn hresult_from_win32(e: u32) -> HRESULT {
     let facility_win32 = 0x0007u32;
 
     if e > 0 {
@@ -18,6 +18,12 @@ fn hresult_from_win32(e: u32) -> HRESULT {
     } else {
         e as HRESULT
     }
+}
+
+pub fn hresult_from_nt(e: i32) -> HRESULT {
+    let facility_nt_bit = 0x1000_0000;
+
+    (e | facility_nt_bit) as HRESULT
 }
 
 #[derive(Debug, thiserror::Error)]

@@ -41,6 +41,8 @@ struct DecryptDataParams
 	uint8_t* (*allocate_callback)(size_t);
 	size_t encrypted_size;
 	uint8_t* encrypted_data;
+	size_t iv_size;
+	uint8_t* iv;
 	size_t tag_size;
 	uint8_t* tag;
 	size_t decrypted_size;
@@ -88,7 +90,6 @@ void DumpBytes(_In_ uint8_t* buffer, size_t allocation_size) {
 
 		std::cout << std::endl;
 	}
-
 }
 
 void* StartEnclave(std::wstring enclave_name) {
@@ -467,6 +468,13 @@ int wmain(int argc, wchar_t **argv)
 	BCRYPT_INIT_AUTH_MODE_INFO(mode_info);
 
 	uint8_t iv[12] = {};
+
+	// Never use a static IV for AES-GCM unless you only ever use the key once!
+	if (BCryptGenRandom(BCRYPT_RNG_ALG_HANDLE, iv, sizeof(iv), 0) != 0) {
+		std::cerr << "BCryptGenRandom failed!" << std::endl;
+		return -1;
+	}
+
 	mode_info.pbNonce = iv;
 	mode_info.cbNonce = sizeof(iv);
 
@@ -484,7 +492,15 @@ int wmain(int argc, wchar_t **argv)
 		return -1;
 	}
 	
-	DecryptDataParams decrypt_data_params = { AllocateCallback, bytes_needed, ciphertext.get(), mode_info.cbTag, mode_info.pbTag};
+	DecryptDataParams decrypt_data_params = { 
+		AllocateCallback,
+		bytes_needed,
+		ciphertext.get(),
+		mode_info.cbNonce,
+		mode_info.pbNonce,
+		mode_info.cbTag,
+		mode_info.pbTag
+	};
 	auto decrypted_data = DecryptMessage(enclave_base.get(), decrypt_data_params);
 
 	std::cout << "Data decrypted! Message is:" << std::endl;

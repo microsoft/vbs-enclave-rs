@@ -20,6 +20,8 @@ pub struct DecryptDataParams {
     pub allocate_callback: extern "C" fn(usize) -> *mut u8,
     pub encrypted_size: usize,
     pub encrypted_data: *const u8,
+    pub iv_size: usize,
+    pub iv: *const u8,
     pub tag_size: usize,
     pub tag: *const u8,
     pub decrypted_size: usize,

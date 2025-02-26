@@ -154,6 +154,24 @@ extern "C" fn decrypt_data(params_vtl0: *mut DecryptDataParams) -> HRESULT {
         return EnclaveError::invalid_arg().into();
     }
 
+    let mut iv: Vec<u8> = Vec::new();
+    iv.resize(params_vtl1.iv_size, 0u8);
+
+    if is_valid_vtl0(
+        (&params_vtl1).iv as *const u8 as *const _,
+        (&params_vtl1).iv_size,
+    ) {
+        unsafe {
+            iv.as_mut_slice()
+                .copy_from_slice(core::slice::from_raw_parts(
+                    params_vtl1.iv,
+                    params_vtl1.iv_size,
+                ));
+        }
+    } else {
+        return EnclaveError::invalid_arg().into();
+    }
+
     let mut tag: Vec<u8> = Vec::new();
     tag.resize(params_vtl1.tag_size, 0u8);
 
@@ -172,7 +190,7 @@ extern "C" fn decrypt_data(params_vtl0: *mut DecryptDataParams) -> HRESULT {
         return EnclaveError::invalid_arg().into();
     }
 
-    let decrypted_data = match decrypt_data_internal(&encrypted_data, &mut tag) {
+    let decrypted_data = match decrypt_data_internal(&encrypted_data, &mut iv, &mut tag) {
         Ok(v) => v,
         Err(e) => return e.into(),
     };
