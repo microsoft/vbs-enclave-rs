@@ -1,3 +1,8 @@
+use crate::params::{DecryptDataParams, GenerateReportParams, NewKeypairParams};
+use crate::{
+    decrypt_data_internal, generate_report_internal, new_keypair_internal,
+    ECDH_256_PUBLIC_BLOB_SIZE,
+};
 use alloc::vec::Vec;
 use hex_literal::hex;
 use vbs_enclave::enclaveapi::{call_enclave, EnclaveRoutineInvocation};
@@ -7,11 +12,6 @@ use vbs_enclave::types::LPENCLAVE_ROUTINE;
 use vbs_enclave::winenclave::{
     ImageEnclaveConfig, IMAGE_ENCLAVE_FLAG_PRIMARY_IMAGE, IMAGE_ENCLAVE_MINIMUM_CONFIG_SIZE,
 };
-use windows_sys::Win32::Security::Cryptography::BCRYPT_ECCKEY_BLOB;
-use windows_sys::Win32::System::Environment::ENCLAVE_REPORT_DATA_LENGTH;
-
-use crate::params::{DecryptDataParams, GenerateReportParams, NewKeypairParams};
-use crate::{decrypt_data_internal, generate_report_internal, new_keypair_internal};
 
 // You should only enable debug in debug builds, or it can allow someone to
 // access your enclave in VTL0.
@@ -63,21 +63,19 @@ extern "C" fn new_keypair(params_vtl0: *const NewKeypairParams) -> HRESULT {
 
     // Next, the public key buffer also lives in vtl0, so it needs to be
     // validated and copied into vtl1 as well.
-    let public_key_blob_size =
-        size_of::<BCRYPT_ECCKEY_BLOB>() + ENCLAVE_REPORT_DATA_LENGTH as usize;
     let mut public_key_blob = Vec::new();
-    public_key_blob.resize(public_key_blob_size, 0u8);
+    public_key_blob.resize(ECDH_256_PUBLIC_BLOB_SIZE, 0u8);
 
     if is_valid_vtl0(
         (&params_vtl1).public_key_blob as *const u8 as *const _,
-        public_key_blob_size,
+        ECDH_256_PUBLIC_BLOB_SIZE,
     ) {
         unsafe {
             public_key_blob
                 .as_mut_slice()
                 .copy_from_slice(core::slice::from_raw_parts(
                     params_vtl1.public_key_blob,
-                    public_key_blob_size,
+                    ECDH_256_PUBLIC_BLOB_SIZE,
                 ));
         }
     } else {

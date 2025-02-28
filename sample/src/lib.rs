@@ -26,6 +26,9 @@ mod params;
 static KEYPAIR: Mutex<usize> = Mutex::new(0);
 static KEY: Mutex<usize> = Mutex::new(0);
 
+const ECDH_256_PUBLIC_BLOB_SIZE: usize =
+    size_of::<BCRYPT_ECCKEY_BLOB>() + ENCLAVE_REPORT_DATA_LENGTH as usize;
+
 fn new_keypair_internal(key_size: u32, public_key_blob: &[u8]) -> Result<(), EnclaveError> {
     let mut key = KEY.lock();
     let mut keypair = KEYPAIR.lock();
@@ -94,8 +97,11 @@ fn generate_report_internal() -> Result<Vec<u8>, EnclaveError> {
     let keypair = *KEYPAIR.lock() as BCRYPT_KEY_HANDLE;
     let public_key_blob = bcrypt::export_key(keypair, None, BCRYPT_ECCPUBLIC_BLOB)?;
 
-    if public_key_blob.len() > size_of::<BCRYPT_ECCKEY_BLOB>() + ENCLAVE_REPORT_DATA_LENGTH as usize
-    {
+    // The key blob itself is a ECDH-256 public key, which means that the x and y are each
+    // 32 bytes. The available buffer for data in the attestation report is 64 bytes,
+    // which leaves no space for the BCRYPT_ECCKEY_BLOB header, so that will have to
+    // be recreated on the host process side.
+    if public_key_blob.len() != ECDH_256_PUBLIC_BLOB_SIZE {
         return Err(EnclaveError::insufficient_buffer());
     }
 
