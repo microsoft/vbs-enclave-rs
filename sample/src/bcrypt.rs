@@ -14,10 +14,6 @@ use windows_sys::Win32::{
 
 pub const AES256_KEY_SIZE: usize = 32;
 
-pub trait PaddingInfo {}
-
-impl PaddingInfo for BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO {}
-
 pub trait KeyBlob {
     fn size(&self) -> u32;
 }
@@ -265,36 +261,25 @@ pub fn export_key(
     }
 }
 
-pub fn decrypt(
+pub fn decrypt_aes_gcm(
     key: BCRYPT_KEY_HANDLE,
     encrypted_data: &[u8],
-    padding_info: Option<&dyn PaddingInfo>,
-    iv: Option<&mut [u8]>,
-    flags: u32,
+    padding_info: &BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO,
 ) -> Result<Vec<u8>, EnclaveError> {
     let mut decrypted_size = 0u32;
-
-    let (iv, iv_size) = match iv {
-        Some(i) => (i.as_mut_ptr(), i.len() as u32),
-        None => (core::ptr::null_mut(), 0),
-    };
 
     unsafe {
         match BCryptDecrypt(
             key,
             encrypted_data.as_ptr(),
             encrypted_data.len() as u32,
-            if let Some(p) = padding_info {
-                p as *const _ as *const _
-            } else {
-                core::ptr::null()
-            },
-            iv,
-            iv_size,
+            padding_info as *const _ as *const _,
+            core::ptr::null_mut(),
+            0,
             core::ptr::null_mut(),
             0,
             &mut decrypted_size,
-            flags,
+            0,
         ) {
             STATUS_SUCCESS => {}
             e => {
@@ -313,17 +298,13 @@ pub fn decrypt(
             key,
             encrypted_data.as_ptr(),
             encrypted_data.len() as u32,
-            if let Some(p) = padding_info {
-                p as *const _ as *const _
-            } else {
-                core::ptr::null()
-            },
+            padding_info as *const _ as *const _,
             core::ptr::null_mut(),
             0,
             decrypted_data.as_mut_ptr() as *mut _,
             decrypted_data.len() as u32,
             &mut decrypted_size,
-            flags,
+            0,
         ) {
             STATUS_SUCCESS => Ok(decrypted_data),
             e => Err(EnclaveError {

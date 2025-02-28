@@ -118,5 +118,5 @@ fn decrypt_data_internal(
         dwFlags: 0,
     };
 
-    bcrypt::decrypt(key, encrypted_data, Some(&mode_info), None, 0)
+    bcrypt::decrypt_aes_gcm(key, encrypted_data, &mode_info)
 }
