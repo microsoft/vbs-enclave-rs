@@ -86,7 +86,7 @@ fn new_keypair_internal(key_size: u32, public_key_blob: &[u8]) -> Result<(), Enc
         &mut key_blob,
     )?;
 
-    *key = aes_key as _;
+    *key = aes_key as usize;
     Ok(())
 }
 
