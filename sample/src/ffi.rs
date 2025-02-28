@@ -15,6 +15,7 @@ use vbs_enclave::winenclave::{
 
 // You should only enable debug in debug builds, or it can allow someone to
 // access your enclave in VTL0.
+// See: https://learn.microsoft.com/en-us/windows/win32/trusted-execution/vbs-enclaves-dev-guide#step-4-debugging-vbs-enclaves
 #[cfg(debug_assertions)]
 const ENCLAVE_CONFIG_POLICY_FLAGS: u32 = vbs_enclave::winenclave::IMAGE_ENCLAVE_POLICY_DEBUGGABLE;
 #[cfg(not(debug_assertions))]
