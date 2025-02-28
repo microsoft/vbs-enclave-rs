@@ -15,10 +15,12 @@ pub struct EnclaveRoutineInvocation {
 }
 
 impl EnclaveRoutineInvocation {
-    /// SAFETY: `routine` and `param` could potentially be
-    /// invalid pointers; `routine` must be a valid function pointer,
-    /// and `param` must be a valid parameter for the function pointer,
+    /// SAFETY: `routine` must be a valid function pointer.
+    /// `param` must be a valid parameter for the function pointer,
     /// either an integer value that is expected, or a valid allocation.
+    /// 
+    /// The EnclaveRoutineInvocation object must not outlive the lifetime
+    /// of either of these pointers.
     pub unsafe fn new(routine: LPENCLAVE_ROUTINE, param: *const c_void) -> Self {
         Self { routine, param }
     }
