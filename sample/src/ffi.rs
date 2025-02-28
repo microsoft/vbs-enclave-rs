@@ -184,10 +184,7 @@ extern "C" fn decrypt_data(params_vtl0: *mut DecryptDataParams) -> HRESULT {
     let mut encrypted_data: Vec<u8> = Vec::new();
     encrypted_data.resize(params_vtl1.encrypted_size, 0u8);
 
-    if is_valid_vtl0(
-        (&params_vtl1).encrypted_data,
-        (&params_vtl1).encrypted_size,
-    ) {
+    if is_valid_vtl0((&params_vtl1).encrypted_data, (&params_vtl1).encrypted_size) {
         unsafe {
             encrypted_data
                 .as_mut_slice()
@@ -205,10 +202,7 @@ extern "C" fn decrypt_data(params_vtl0: *mut DecryptDataParams) -> HRESULT {
     let mut iv: Vec<u8> = Vec::new();
     iv.resize(params_vtl1.iv_size, 0u8);
 
-    if is_valid_vtl0(
-        (&params_vtl1).iv,
-        (&params_vtl1).iv_size,
-    ) {
+    if is_valid_vtl0((&params_vtl1).iv, (&params_vtl1).iv_size) {
         unsafe {
             iv.as_mut_slice()
                 .copy_from_slice(core::slice::from_raw_parts(
@@ -225,10 +219,7 @@ extern "C" fn decrypt_data(params_vtl0: *mut DecryptDataParams) -> HRESULT {
     let mut tag: Vec<u8> = Vec::new();
     tag.resize(params_vtl1.tag_size, 0u8);
 
-    if is_valid_vtl0(
-        (&params_vtl1).tag,
-        (&params_vtl1).tag_size,
-    ) {
+    if is_valid_vtl0((&params_vtl1).tag, (&params_vtl1).tag_size) {
         unsafe {
             tag.as_mut_slice()
                 .copy_from_slice(core::slice::from_raw_parts(
