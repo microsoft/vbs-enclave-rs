@@ -6,10 +6,10 @@ This project is the result of a Microsoft Offensive Research & Security Engineer
 
 ## Requirements
 
-- Rustlang 1.86.0-nightly
+- [Rustlang](https://www.rust-lang.org/tools/install) 1.86.0-nightly
 - Cargo
-- Visual Studio 2022
-- Windows 11 SDK (10.0.26100.0)
+- [Visual Studio 2022](https://visualstudio.microsoft.com/downloads/)
+- [Windows 11 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-sdk/) (10.0.22621.3233 or later)
 
 It was tested on x86_64, but will probably build for arm64 with no issues.
 
