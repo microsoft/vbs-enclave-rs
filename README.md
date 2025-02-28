@@ -103,6 +103,7 @@ The message round-tripped!
 ## Future
 - Develop safe wrappers for VTL0 pointers and other mechanisms to ensure secure pointer usage across the VTL0<->VTL1 trust boundary
 - Use bindgen to generate parameter structures used in the host process from its header files
+- Implement a Rust version of SampleHost too
 
 ## Contributing
 
