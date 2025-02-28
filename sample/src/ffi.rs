@@ -122,7 +122,7 @@ extern "C" fn generate_report(params_vtl0: *mut GenerateReportParams) -> HRESULT
     };
 
     // Once we have the report vector, we call the vtl0 allocation callback
-    // and validate that the pointer we get back is valid before copying the
+    // and validate that the pointer we get back is enclave-external before copying the
     // data out to it.
     let invocation = unsafe {
         EnclaveRoutineInvocation::new(
