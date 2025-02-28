@@ -1,3 +1,5 @@
+use core::ffi::c_void;
+
 use crate::params::{DecryptDataParams, GenerateReportParams, NewKeypairParams};
 use crate::{
     decrypt_data_internal, generate_report_internal, new_keypair_internal,
@@ -56,7 +58,7 @@ extern "C" fn new_keypair(params_vtl0: *const NewKeypairParams) -> HRESULT {
     // pointer is fully within vtl0 memory, then copy it into vtl1 memory.
     // This prevents time-of-check/time-of-use bugs that can arise if you
     // read values that are residing within vtl0.
-    let params_vtl1 = if is_valid_vtl0(params_vtl0 as *const _, size_of::<NewKeypairParams>()) {
+    let params_vtl1 = if is_valid_vtl0(params_vtl0, size_of::<NewKeypairParams>()) {
         unsafe { *params_vtl0 }
     } else {
         return EnclaveError::invalid_arg().into();
@@ -98,7 +100,7 @@ extern "C" fn generate_report(params_vtl0: *mut GenerateReportParams) -> HRESULT
     // This prevents time-of-check/time-of-use bugs that can arise if you
     // read values that are residing within vtl0.
     let params_vtl1 = unsafe {
-        if is_valid_vtl0(params_vtl0 as *const _, size_of::<GenerateReportParams>()) {
+        if is_valid_vtl0(params_vtl0, size_of::<GenerateReportParams>()) {
             *params_vtl0.clone()
         } else {
             return EnclaveError::invalid_arg().into();
@@ -110,7 +112,7 @@ extern "C" fn generate_report(params_vtl0: *mut GenerateReportParams) -> HRESULT
     // Note that this pointer is checked in the vtl1 struct, not the vtl0 struct,
     // because if it were checked in the vtl0 struct, an attacker could change it
     // after it is checked but before it is used.
-    if !is_valid_vtl0(params_vtl1.allocate_callback as *const _, 1) {
+    if !is_valid_vtl0(params_vtl1.allocate_callback as *const c_void, 1) {
         return EnclaveError::invalid_arg().into();
     }
 
@@ -136,7 +138,7 @@ extern "C" fn generate_report(params_vtl0: *mut GenerateReportParams) -> HRESULT
         Err(e) => return e.into(),
     };
 
-    if is_valid_vtl0(allocation as *const _, report.len()) {
+    if is_valid_vtl0(allocation, report.len()) {
         unsafe {
             let data_vtl0: &mut [u8] = core::slice::from_raw_parts_mut(allocation, report.len());
             data_vtl0.copy_from_slice(&report);
@@ -162,7 +164,7 @@ extern "C" fn decrypt_data(params_vtl0: *mut DecryptDataParams) -> HRESULT {
     // pointer is fully within vtl0 memory, then copy it into vtl1 memory.
     // This prevents time-of-check/time-of-use bugs that can arise if you
     // read values that are residing within vtl0.
-    let params_vtl1 = if is_valid_vtl0(params_vtl0 as *const _, size_of::<DecryptDataParams>()) {
+    let params_vtl1 = if is_valid_vtl0(params_vtl0, size_of::<DecryptDataParams>()) {
         unsafe { *params_vtl0.clone() }
     } else {
         return EnclaveError::invalid_arg().into();
@@ -173,7 +175,7 @@ extern "C" fn decrypt_data(params_vtl0: *mut DecryptDataParams) -> HRESULT {
     // Note that this pointer is checked in the vtl1 struct, not the vtl0 struct,
     // because if it were checked in the vtl0 struct, an attacker could change it
     // after it is checked but before it is used.
-    if !is_valid_vtl0(params_vtl1.allocate_callback as *const _, 1) {
+    if !is_valid_vtl0(params_vtl1.allocate_callback as *const c_void, 1) {
         return EnclaveError::invalid_arg().into();
     }
 
@@ -183,7 +185,7 @@ extern "C" fn decrypt_data(params_vtl0: *mut DecryptDataParams) -> HRESULT {
     encrypted_data.resize(params_vtl1.encrypted_size, 0u8);
 
     if is_valid_vtl0(
-        (&params_vtl1).encrypted_data as *const u8 as *const _,
+        (&params_vtl1).encrypted_data,
         (&params_vtl1).encrypted_size,
     ) {
         unsafe {
@@ -204,7 +206,7 @@ extern "C" fn decrypt_data(params_vtl0: *mut DecryptDataParams) -> HRESULT {
     iv.resize(params_vtl1.iv_size, 0u8);
 
     if is_valid_vtl0(
-        (&params_vtl1).iv as *const u8 as *const _,
+        (&params_vtl1).iv,
         (&params_vtl1).iv_size,
     ) {
         unsafe {
@@ -224,7 +226,7 @@ extern "C" fn decrypt_data(params_vtl0: *mut DecryptDataParams) -> HRESULT {
     tag.resize(params_vtl1.tag_size, 0u8);
 
     if is_valid_vtl0(
-        (&params_vtl1).tag as *const u8 as *const _,
+        (&params_vtl1).tag,
         (&params_vtl1).tag_size,
     ) {
         unsafe {
@@ -260,7 +262,7 @@ extern "C" fn decrypt_data(params_vtl0: *mut DecryptDataParams) -> HRESULT {
         Err(e) => return e.into(),
     };
 
-    if is_valid_vtl0(allocation as *const _, decrypted_data.len()) {
+    if is_valid_vtl0(allocation, decrypted_data.len()) {
         unsafe {
             let data_vtl0: &mut [u8] =
                 core::slice::from_raw_parts_mut(allocation, decrypted_data.len());
