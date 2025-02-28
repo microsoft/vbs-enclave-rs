@@ -1,6 +1,6 @@
 # VBS Rust Enclave Example
 
-This proof-of-concept demonstrates how one can implement a Windows [Virtualization Based Security enclave](https://learn.microsoft.com/en-us/windows/win32/trusted-execution/vbs-enclaves) in Rust.
+This proof-of-concept demonstrates how one can implement a Windows [Virtualization-based security (VBS) enclave](https://learn.microsoft.com/en-us/windows/win32/trusted-execution/vbs-enclaves) in Rust.
 
 This project is the result of a Microsoft Offensive Research & Security Engineering (MORSE) hackathon.
 
@@ -8,7 +8,7 @@ This project is the result of a Microsoft Offensive Research & Security Engineer
 
 - Rustlang 1.86.0-nightly
 - Cargo
-- Visual Studio 2022 or Visual Studio Build Tools 2022
+- Visual Studio 2022
 - Windows 11 SDK (10.0.26100.0)
 
 It was tested on x86_64, but will probably build for arm64 with no issues.
@@ -56,26 +56,26 @@ signtool.exe sign /ph /fd SHA256 /n "MyTestEnclaveCert" target\release\sample_vb
 Once you have the sample host and enclave executables, you can launch it like so, with this example output:
 
 ```
-C:\> .\SampleHost.exe .\sample_vbs_enclave_rs.dll "Hello World"
+> .\SampleHost.exe .\sample_vbs_enclave_rs.dll "Hello World"
 Rust enclave created and initialized!
-new_keypair is 000002AA41DEEA20
-generate_report is 000002AA41DEEC00
-decrypt_data is 000002AA41DEEFF0
+Creating host keypair...
 Creating new enclave key and providing host public key...
 New keypair created!
 Report generated! 1240 bytes!
 Beep boop beep, validating attestation report... (for pretend)
 Enclave is validated!
+Deriving shared key...
 Public key imported successfully!
 Successfully derived shared ephemeral key!
 Encrypting the message:
 48 00 65 00 6c 00 6c 00 6f 00 20 00 57 00 6f 00 H.e.l.l.o...W.o.
 72 00 6c 00 64 00                               r.l.d.
 
-Message successfully encrypted! Sending to enclave to decrypt...
 Data decrypted! Message is:
 48 00 65 00 6c 00 6c 00 6f 00 20 00 57 00 6f 00 H.e.l.l.o...W.o.
 72 00 6c 00 64 00                               r.l.d.
+
+The message round-tripped!
 ```
 
 ## Contributing

@@ -25,11 +25,12 @@ fn panic(_panic: &PanicInfo<'_>) -> ! {
 static ENCLAVE_BASE: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
 static ENCLAVE_END: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
 
-pub fn is_valid_vtl0(base: *const c_void, size: usize) -> bool {
+pub fn is_valid_vtl0<T>(base: *const T, size: usize) -> bool {
     !base.is_null() && is_valid_vtl0_or_null(base, size)
 }
 
-pub fn is_valid_vtl0_or_null(base: *const c_void, size: usize) -> bool {
+pub fn is_valid_vtl0_or_null<T>(base: *const T, size: usize) -> bool {
+    let base = base as *const c_void;
     let enclave_base = ENCLAVE_BASE.load(Ordering::Relaxed) as *const _;
     let enclave_end = ENCLAVE_END.load(Ordering::Relaxed) as *const _;
 
