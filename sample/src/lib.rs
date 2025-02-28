@@ -48,6 +48,8 @@ fn new_keypair_internal(key_size: u32, public_key_blob: &[u8]) -> Result<(), Enc
 
     let secret = bcrypt::secret_agreement(*keypair as BCRYPT_KEY_HANDLE, public_key)?;
 
+    // This really should only fail if the key handle is invalid
+    // but since we already used the key, we know it exists.
     let _ = bcrypt::destroy_key(public_key);
 
     let mut parameters = [BCryptBuffer {
@@ -58,6 +60,8 @@ fn new_keypair_internal(key_size: u32, public_key_blob: &[u8]) -> Result<(), Enc
 
     let derived_key = bcrypt::derive_key(secret, BCRYPT_KDF_HASH, &mut parameters)?;
 
+    // This really should only fail if the key handle is invalid
+    // but since we already used the key, we know it exists.
     let _ = bcrypt::destroy_key(secret);
 
     let mut key_blob = bcrypt::Aes256KeyBlob {
