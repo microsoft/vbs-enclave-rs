@@ -52,6 +52,10 @@ fn new_keypair_internal(key_size: u32, public_key_blob: &[u8]) -> Result<(), Enc
     // but since we already used the key, we know it exists.
     let _ = bcrypt::destroy_key(public_key);
 
+    // `pvBuffer` has to be a pointer to a UTF-16 C-string literal
+    // and window-sys exports a *const u16 for the string literal,
+    // but in the process of the conversion, the static length
+    // is lost. Therefore, we have to calculate it ourselves.
     let mut parameters = [BCryptBuffer {
         cbBuffer: (("SHA256".len() + 1) * 2) as u32,
         BufferType: KDF_HASH_ALGORITHM,
