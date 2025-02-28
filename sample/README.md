@@ -1,6 +1,6 @@
 # VBS Rust Enclave Example
 
-This proof-of-concept demonstrates how one can implement a Windows [Virtualization Based Security enclave](https://learn.microsoft.com/en-us/windows/win32/trusted-execution/vbs-enclaves) in Rust.
+This proof-of-concept demonstrates how one can implement a Windows [Virtualization-based security (VBS) enclave](https://learn.microsoft.com/en-us/windows/win32/trusted-execution/vbs-enclaves) in Rust.
 
 This project is the result of a Microsoft Offensive Research & Security Engineering (MORSE) hackathon.
 
