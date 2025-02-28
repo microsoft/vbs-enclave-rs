@@ -74,7 +74,9 @@ fn new_keypair_internal(key_size: u32, public_key_blob: &[u8]) -> Result<(), Enc
             dwVersion: BCRYPT_KEY_DATA_BLOB_VERSION1,
             cbKeyData: bcrypt::AES256_KEY_SIZE as u32,
         },
-        key_material: derived_key.try_into().unwrap(),
+        key_material: derived_key.try_into().expect(
+            "A successful derive_key will always result in a Vec<u8> of length AES256_KEY_SIZE",
+        ),
     };
 
     let aes_key = bcrypt::import_key(
