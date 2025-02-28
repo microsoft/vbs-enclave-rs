@@ -45,7 +45,29 @@ The sample host executable, `SampleHost.exe` is a Visual Studio project. Ensure 
 
 ### `sample-vbs-enclave-rs`
 
-Prior to building, follow the steps in the [VBS Enclaves Development Guide](https://learn.microsoft.com/en-us/windows/win32/trusted-execution/vbs-enclaves-dev-guide#step-3-signing-vbs-enclave-dlls) for configuring test signing.
+#### Test Signing
+Prior to building, follow the steps in the [VBS Enclaves Development Guide](https://learn.microsoft.com/en-us/windows/win32/trusted-execution/vbs-enclaves-dev-guide#step-3-signing-vbs-enclave-dlls) for configuring test signing. Export your certificate to a file (in these instructions, we use `enclave.cer`)
+
+You will probably want to run the sample on a test system, since it requires test signing. When you set up your test system, ensure that VBS is enabled. The instructions below work for a Hyper-V VM:
+
+On your host system, in an administrator prompt, run:
+```powershell
+Set-VMProcessor -VmName "My VM Name" -ExposeVirtualizationExtensions $true
+```
+
+On your test system VM, run:
+```powershell
+bcdedit /set testsigning on
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v "EnableVirtualizationBasedSecurity" /t REG_DWORD /d 1 /f
+Restart-Computer
+```
+
+Additionally, you will need to copy your test signing certificate to the test system and install it:
+
+```powershell
+Set-Location -Path Cert:\CurrentUser\My
+Import-Certificate C:\enclave.cer 
+```
 
 Once you have a test signing certificate created and have enabled test signing on the system that will run the example enclave, you can build the enclave itself from the Visual Studio command prompt:
 
