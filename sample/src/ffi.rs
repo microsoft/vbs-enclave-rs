@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 use hex_literal::hex;
-use vbs_enclave::enclaveapi::call_enclave;
+use vbs_enclave::enclaveapi::{call_enclave, EnclaveRoutineInvocation};
 use vbs_enclave::error::{EnclaveError, HRESULT, S_OK};
 use vbs_enclave::is_valid_vtl0;
 use vbs_enclave::types::LPENCLAVE_ROUTINE;
@@ -126,14 +126,15 @@ extern "C" fn generate_report(params_vtl0: *mut GenerateReportParams) -> HRESULT
     // Once we have the report vector, we call the vtl0 allocation callback
     // and validate that the pointer we get back is valid before copying the
     // data out to it.
-    let mut allocation: *mut u8 = core::ptr::null_mut();
-    if let Err(e) = call_enclave(
-        params_vtl1.allocate_callback as LPENCLAVE_ROUTINE,
-        report.len() as *mut _,
-        true,
-        &mut allocation as *mut *mut u8 as *mut *mut _,
-    ) {
-        return e.into();
+    let invocation = unsafe {
+        EnclaveRoutineInvocation::new(
+            params_vtl1.allocate_callback as LPENCLAVE_ROUTINE,
+            report.len() as *const _,
+        )
+    };
+    let allocation: *mut u8 = match call_enclave(invocation, true) {
+        Ok(v) => v as *mut u8,
+        Err(e) => return e.into(),
     };
 
     if is_valid_vtl0(allocation as *const _, report.len()) {
@@ -167,6 +168,15 @@ extern "C" fn decrypt_data(params_vtl0: *mut DecryptDataParams) -> HRESULT {
     } else {
         return EnclaveError::invalid_arg().into();
     };
+
+    // Next, the callback pointer in the structure needs to be validated, otherwise
+    // CallEnclave can call a function within our vtl1 enclave and that is bad.
+    // Note that this pointer is checked in the vtl1 struct, not the vtl0 struct,
+    // because if it were checked in the vtl0 struct, an attacker could change it
+    // after it is checked but before it is used.
+    if !is_valid_vtl0(params_vtl1.allocate_callback as *const _, 1) {
+        return EnclaveError::invalid_arg().into();
+    }
 
     // The encrypted data buffer also lives in vtl0, so it needs to be
     // validated and copied into vtl1 as well.
@@ -240,15 +250,16 @@ extern "C" fn decrypt_data(params_vtl0: *mut DecryptDataParams) -> HRESULT {
     // Once we have the plaintext vector, we call the vtl0 allocation callback
     // and validate that the pointer we get back is valid before copying the
     // data out to it.
-    let mut allocation: *mut u8 = core::ptr::null_mut();
-    if let Err(e) = call_enclave(
-        params_vtl1.allocate_callback as LPENCLAVE_ROUTINE,
-        decrypted_data.len() as *mut _,
-        true,
-        &mut allocation as *mut *mut u8 as *mut *mut _,
-    ) {
-        return e.into();
-    }
+    let invocation = unsafe {
+        EnclaveRoutineInvocation::new(
+            params_vtl1.allocate_callback as LPENCLAVE_ROUTINE,
+            decrypted_data.len() as *const _,
+        )
+    };
+    let allocation: *mut u8 = match call_enclave(invocation, true) {
+        Ok(v) => v as *mut u8,
+        Err(e) => return e.into(),
+    };
 
     if is_valid_vtl0(allocation as *const _, decrypted_data.len()) {
         unsafe {
