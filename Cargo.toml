@@ -2,6 +2,8 @@
 name = "vbs-enclave"
 version = "0.2.0"
 edition = "2021"
+license-file = "LICENSE"
+publish = false
 
 [lib]
 test = false

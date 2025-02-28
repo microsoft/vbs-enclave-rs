@@ -2,6 +2,8 @@
 name = "sample-vbs-enclave-rs"
 version = "0.2.0"
 edition = "2021"
+license-file = "../LICENSE"
+publish = false
 
 [lib]
 crate-type = ["cdylib"]
