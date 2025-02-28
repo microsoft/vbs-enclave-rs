@@ -25,7 +25,8 @@ const uint8_t OwnerId[IMAGE_ENCLAVE_LONG_ID_LENGTH] = {0x10, 0x20, 0x30, 0x40, 0
 struct NewKeypairParams
 {
 	uint32_t key_size;
-	uint8_t* public_key;
+	uint8_t *public_key;
+
 
 };
 
