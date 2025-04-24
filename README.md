@@ -9,7 +9,7 @@ This project is the result of a Microsoft Offensive Research & Security Engineer
 - [Rustlang](https://www.rust-lang.org/tools/install) 1.86.0-nightly
 - Cargo
 - [Visual Studio 2022](https://visualstudio.microsoft.com/downloads/)
-- [Windows 11 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-sdk/) (10.0.22621.3233 or later)
+- [Windows 11 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-sdk/) (10.0.26100.3624 or later)
 
 It was tested on x86_64, but will probably build for arm64 with no issues.
 
@@ -30,14 +30,15 @@ Prior to building, follow the steps in the [VBS Enclaves Development Guide](http
 
 You will probably want to run the sample on a test system, since it requires test signing. When you set up your test system, ensure that VBS is enabled. The instructions below work for a Hyper-V VM:
 
+##### Generation 1 VM
 On your host system, in an administrator prompt, run:
 ```powershell
 Set-VMProcessor -VmName "My VM Name" -ExposeVirtualizationExtensions $true
 ```
-
+##### Generation 1 and 2 VMs
 On your test system VM, run:
 ```powershell
-bcdedit /set testsigning on
+bcdedit /set testsigning on # you will need to disable Secure Boot on Generation 2 VMs first
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v "EnableVirtualizationBasedSecurity" /t REG_DWORD /d 1 /f
 Restart-Computer
 ```
@@ -51,11 +52,16 @@ Import-Certificate C:\enclave.cer
 
 Once you have a test signing certificate created and have enabled test signing on the system that will run the example enclave, you can build the enclave itself from the Visual Studio command prompt:
 
+#### Strict Memory
+As of Windows SDK 10.0.26100.3624, VBS enclaves support a strict memory policy that prevents the enclave from directly accessing VTL0 memory. This removes a lot of attack surface that can result from not validating pointers before accessing them in the enclave.
+
+To enable this policy in the enclave, use the `strict_memory` feature; this is reflected in the build instructions below, but if you do not specify it, it will default to the old, insecure, policy.
+
 #### Debug build
 
 ```powershell
 cd sample
-cargo build
+cargo build --features strict_memory
 veiid.exe .\target\debug\sample_vbs_enclave_rs.dll
 
 # Replace "MyTestEnclaveCert" with your test signing certificate's name
@@ -66,7 +72,7 @@ signtool.exe sign /ph /fd SHA256 /n "MyTestEnclaveCert" target\debug\sample_vbs_
 
 ```powershell
 cd sample
-cargo build -r
+cargo build -r --features strict_memory
 veiid.exe .\target\release\sample_vbs_enclave_rs.dll
 
 # Replace "MyTestEnclaveCert" with your test signing certificate's name
