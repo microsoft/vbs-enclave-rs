@@ -2,10 +2,16 @@ use core::mem::{offset_of, MaybeUninit};
 
 use alloc::vec::Vec;
 
-use windows_sys::{core::HRESULT, Win32::{Foundation::BOOL, System::Environment::{
-    EnclaveGetAttestationReport, EnclaveGetEnclaveInformation, EnclaveSealData, EnclaveUnsealData,
-    ENCLAVE_IDENTITY, ENCLAVE_INFORMATION, ENCLAVE_REPORT_DATA_LENGTH
-}}};
+use windows_sys::{
+    core::HRESULT,
+    Win32::{
+        Foundation::BOOL,
+        System::Environment::{
+            EnclaveGetAttestationReport, EnclaveGetEnclaveInformation, EnclaveSealData,
+            EnclaveUnsealData, ENCLAVE_IDENTITY, ENCLAVE_INFORMATION, ENCLAVE_REPORT_DATA_LENGTH,
+        },
+    },
+};
 
 use crate::error::{check_hr, EnclaveError};
 
@@ -237,28 +243,25 @@ extern "C" {
     fn EnclaveCopyIntoEnclave(
         enclave_address: *mut core::ffi::c_void,
         unsecure_address: *const core::ffi::c_void,
-        number_of_bytes: usize
+        number_of_bytes: usize,
     ) -> HRESULT;
 
     fn EnclaveCopyOutOfEnclave(
         unsecure_address: *mut core::ffi::c_void,
         enclave_address: *const core::ffi::c_void,
-        number_of_bytes: usize
+        number_of_bytes: usize,
     ) -> HRESULT;
 
     fn EnclaveRestrictContainingProcessAccess(
         restrict_access: BOOL,
-        previously_restricted: *mut BOOL
+        previously_restricted: *mut BOOL,
     ) -> HRESULT;
 }
 
 pub fn restrict_containing_process_access(restrict_access: bool) -> Result<bool, EnclaveError> {
     let mut previously_restricted: BOOL = 0;
     let hr = unsafe {
-        EnclaveRestrictContainingProcessAccess(
-            restrict_access as _,
-            &mut previously_restricted
-        )
+        EnclaveRestrictContainingProcessAccess(restrict_access as _, &mut previously_restricted)
     };
     check_hr(hr)?;
 
@@ -267,47 +270,33 @@ pub fn restrict_containing_process_access(restrict_access: bool) -> Result<bool,
 
 pub fn copy_slice_into_enclave(
     vtl1_dest: &mut [u8],
-    vtl0_src: *const u8
+    vtl0_src: *const u8,
 ) -> Result<(), EnclaveError> {
     let hr = unsafe {
-        EnclaveCopyIntoEnclave(
-            vtl1_dest.as_mut_ptr() as _,
-            vtl0_src as _,
-            vtl1_dest.len()
-        )
+        EnclaveCopyIntoEnclave(vtl1_dest.as_mut_ptr() as _, vtl0_src as _, vtl1_dest.len())
     };
     check_hr(hr)?;
 
     Ok(())
 }
 
-pub fn copy_slice_out_of_enclave(
-    vtl0_dest: *mut u8,
-    vtl1_src: &[u8]
-) -> Result<(), EnclaveError> {
-    let hr = unsafe {
-        EnclaveCopyOutOfEnclave(
-            vtl0_dest as _,
-            vtl1_src.as_ptr() as _,
-            vtl1_src.len()
-        )
-    };
+pub fn copy_slice_out_of_enclave(vtl0_dest: *mut u8, vtl1_src: &[u8]) -> Result<(), EnclaveError> {
+    let hr =
+        unsafe { EnclaveCopyOutOfEnclave(vtl0_dest as _, vtl1_src.as_ptr() as _, vtl1_src.len()) };
     check_hr(hr)?;
 
     Ok(())
 }
 
-pub unsafe fn copy_into_enclave_unchecked<T: Copy>(
-    vtl0_src: *const T
-) -> Result<T, EnclaveError> {
+pub unsafe fn copy_into_enclave_unchecked<T: Copy>(vtl0_src: *const T) -> Result<T, EnclaveError> {
     let mut vtl1_buffer: Vec<u8> = Vec::new();
     vtl1_buffer.resize(core::mem::size_of::<T>(), 0);
 
     let hr = unsafe {
-            EnclaveCopyIntoEnclave(
+        EnclaveCopyIntoEnclave(
             vtl1_buffer.as_mut_ptr() as _,
             vtl0_src as _,
-            core::mem::size_of::<T>()
+            core::mem::size_of::<T>(),
         )
     };
 
@@ -318,13 +307,13 @@ pub unsafe fn copy_into_enclave_unchecked<T: Copy>(
 
 pub unsafe fn copy_out_of_enclave_unchecked<T>(
     vtl0_dest: *mut T,
-    vtl1_src: &T
+    vtl1_src: &T,
 ) -> Result<(), EnclaveError> {
     let hr = unsafe {
         EnclaveCopyOutOfEnclave(
             vtl0_dest as _,
             vtl1_src as *const T as _,
-            core::mem::size_of::<T>()
+            core::mem::size_of::<T>(),
         )
     };
     check_hr(hr)?;
@@ -333,13 +322,9 @@ pub unsafe fn copy_out_of_enclave_unchecked<T>(
 }
 
 #[cfg(feature = "zerocopy")]
-pub fn copy_into_enclave<T>(
-    vtl0_src: *const T
-) -> Result<T, EnclaveError> where
-T: zerocopy::TryFromBytes + 
-    zerocopy::KnownLayout + 
-    zerocopy::Immutable + 
-    Copy
+pub fn copy_into_enclave<T>(vtl0_src: *const T) -> Result<T, EnclaveError>
+where
+    T: zerocopy::TryFromBytes + zerocopy::KnownLayout + zerocopy::Immutable + Copy,
 {
     let mut vtl1_buffer: Vec<u8> = Vec::new();
     vtl1_buffer.resize(core::mem::size_of::<T>(), 0);
@@ -348,7 +333,7 @@ T: zerocopy::TryFromBytes +
         EnclaveCopyIntoEnclave(
             vtl1_buffer.as_mut_ptr() as _,
             vtl0_src as _,
-            core::mem::size_of::<T>()
+            core::mem::size_of::<T>(),
         )
     };
     check_hr(hr)?;
@@ -360,18 +345,15 @@ T: zerocopy::TryFromBytes +
 }
 
 #[cfg(feature = "zerocopy")]
-pub fn copy_out_of_enclave<T>(
-    vtl0_dest: *mut T,
-    vtl1_src: &T
-) -> Result<(), EnclaveError> where
-T: zerocopy::KnownLayout + 
-    zerocopy::Immutable
+pub fn copy_out_of_enclave<T>(vtl0_dest: *mut T, vtl1_src: &T) -> Result<(), EnclaveError>
+where
+    T: zerocopy::KnownLayout + zerocopy::Immutable,
 {
     let hr = unsafe {
         EnclaveCopyOutOfEnclave(
             vtl0_dest as _,
             vtl1_src as *const T as _,
-            core::mem::size_of::<T>()
+            core::mem::size_of::<T>(),
         )
     };
     check_hr(hr)?;

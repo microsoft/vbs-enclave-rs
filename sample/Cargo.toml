@@ -16,6 +16,7 @@ panic = "abort"
 panic = "abort"
 
 [features]
+default = ["strict_memory"]
 strict_memory = []
 
 [dependencies]

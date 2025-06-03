@@ -60,7 +60,7 @@ pub struct DecryptDataParams {
     pub tag_size: usize,
     tag: usize,
     pub decrypted_size: usize,
-    decrypted_data: usize,  /* out parameter */
+    decrypted_data: usize, /* out parameter */
 }
 
 impl DecryptDataParams {
