@@ -2,9 +2,15 @@ use core::mem::{offset_of, MaybeUninit};
 
 use alloc::vec::Vec;
 
-use windows_sys::Win32::System::Environment::{
-    EnclaveGetAttestationReport, EnclaveGetEnclaveInformation, EnclaveSealData, EnclaveUnsealData,
-    ENCLAVE_IDENTITY, ENCLAVE_INFORMATION, ENCLAVE_REPORT_DATA_LENGTH,
+use windows_sys::{
+    core::HRESULT,
+    Win32::{
+        Foundation::BOOL,
+        System::Environment::{
+            EnclaveGetAttestationReport, EnclaveGetEnclaveInformation, EnclaveSealData,
+            EnclaveUnsealData, ENCLAVE_IDENTITY, ENCLAVE_INFORMATION, ENCLAVE_REPORT_DATA_LENGTH,
+        },
+    },
 };
 
 use crate::error::{check_hr, EnclaveError};
@@ -22,6 +28,9 @@ pub const ENCLAVE_FLAG_FULL_DEBUG_ENABLED: u32 = 0x0000_0001;
 pub const ENCLAVE_FLAG_DYNAMIC_DEBUG_ENABLED: u32 = 0x0000_0002;
 
 pub const ENCLAVE_FLAG_DYNAMIC_DEBUG_ACTIVE: u32 = 0x0000_0004;
+
+// This isn't in windows-rs yet, so define it here for now
+pub const IMAGE_ENCLAVE_POLICY_STRICT_MEMORY: u32 = 0x0000_0002;
 
 // struct _IMAGE_ENCLAVE_CONFIG64 {
 //     DWORD Size;
@@ -226,4 +235,128 @@ pub fn unseal_data(
     check_hr(hr)?;
 
     Ok(decrypted_data)
+}
+
+// These functions aren't in windows-rs yet, so we define them here.
+#[link(name = "vertdll")]
+extern "C" {
+    fn EnclaveCopyIntoEnclave(
+        enclave_address: *mut core::ffi::c_void,
+        unsecure_address: *const core::ffi::c_void,
+        number_of_bytes: usize,
+    ) -> HRESULT;
+
+    fn EnclaveCopyOutOfEnclave(
+        unsecure_address: *mut core::ffi::c_void,
+        enclave_address: *const core::ffi::c_void,
+        number_of_bytes: usize,
+    ) -> HRESULT;
+
+    fn EnclaveRestrictContainingProcessAccess(
+        restrict_access: BOOL,
+        previously_restricted: *mut BOOL,
+    ) -> HRESULT;
+}
+
+pub fn restrict_containing_process_access(restrict_access: bool) -> Result<bool, EnclaveError> {
+    let mut previously_restricted: BOOL = 0;
+    let hr = unsafe {
+        EnclaveRestrictContainingProcessAccess(restrict_access as _, &mut previously_restricted)
+    };
+    check_hr(hr)?;
+
+    Ok(previously_restricted != 0)
+}
+
+pub fn copy_slice_into_enclave(
+    vtl1_dest: &mut [u8],
+    vtl0_src: *const u8,
+) -> Result<(), EnclaveError> {
+    let hr = unsafe {
+        EnclaveCopyIntoEnclave(vtl1_dest.as_mut_ptr() as _, vtl0_src as _, vtl1_dest.len())
+    };
+    check_hr(hr)?;
+
+    Ok(())
+}
+
+pub fn copy_slice_out_of_enclave(vtl0_dest: *mut u8, vtl1_src: &[u8]) -> Result<(), EnclaveError> {
+    let hr =
+        unsafe { EnclaveCopyOutOfEnclave(vtl0_dest as _, vtl1_src.as_ptr() as _, vtl1_src.len()) };
+    check_hr(hr)?;
+
+    Ok(())
+}
+
+pub unsafe fn copy_into_enclave_unchecked<T: Copy>(vtl0_src: *const T) -> Result<T, EnclaveError> {
+    let mut vtl1_buffer: Vec<u8> = Vec::new();
+    vtl1_buffer.resize(core::mem::size_of::<T>(), 0);
+
+    let hr = unsafe {
+        EnclaveCopyIntoEnclave(
+            vtl1_buffer.as_mut_ptr() as _,
+            vtl0_src as _,
+            core::mem::size_of::<T>(),
+        )
+    };
+
+    check_hr(hr)?;
+
+    Ok(unsafe { *(vtl1_buffer.as_ptr() as *const T) })
+}
+
+pub unsafe fn copy_out_of_enclave_unchecked<T>(
+    vtl0_dest: *mut T,
+    vtl1_src: &T,
+) -> Result<(), EnclaveError> {
+    let hr = unsafe {
+        EnclaveCopyOutOfEnclave(
+            vtl0_dest as _,
+            vtl1_src as *const T as _,
+            core::mem::size_of::<T>(),
+        )
+    };
+    check_hr(hr)?;
+
+    Ok(())
+}
+
+#[cfg(feature = "zerocopy")]
+pub fn copy_into_enclave<T>(vtl0_src: *const T) -> Result<T, EnclaveError>
+where
+    T: zerocopy::TryFromBytes + zerocopy::KnownLayout + zerocopy::Immutable + Copy,
+{
+    let mut vtl1_buffer: Vec<u8> = Vec::new();
+    vtl1_buffer.resize(core::mem::size_of::<T>(), 0);
+
+    let hr = unsafe {
+        EnclaveCopyIntoEnclave(
+            vtl1_buffer.as_mut_ptr() as _,
+            vtl0_src as _,
+            core::mem::size_of::<T>(),
+        )
+    };
+    check_hr(hr)?;
+
+    match T::try_ref_from_bytes(&vtl1_buffer) {
+        Ok(v) => Ok(*v),
+        Err(_) => Err(EnclaveError::invalid_arg()),
+    }
+}
+
+#[cfg(feature = "zerocopy")]
+pub fn copy_out_of_enclave<T>(vtl0_dest: *mut T, vtl1_src: &T) -> Result<(), EnclaveError>
+where
+    T: zerocopy::KnownLayout + zerocopy::Immutable,
+{
+    let hr = unsafe {
+        EnclaveCopyOutOfEnclave(
+            vtl0_dest as _,
+            vtl1_src as *const T as _,
+            core::mem::size_of::<T>(),
+        )
+    };
+    check_hr(hr)?;
+
+    Ok(())
 }

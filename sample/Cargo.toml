@@ -15,8 +15,13 @@ panic = "abort"
 [profile.dev]
 panic = "abort"
 
+[features]
+default = ["strict_memory"]
+strict_memory = []
+
 [dependencies]
-vbs-enclave = { path = ".." }
+vbs-enclave = { path = "..", features=["zerocopy"] }
+zerocopy = { version = "0.8.24", features=["derive"] }
 hex-literal = "0.4.1"
 spin = "0.9.8"
 
