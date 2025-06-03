@@ -30,7 +30,7 @@ Prior to building, follow the steps in the [VBS Enclaves Development Guide](http
 
 You will probably want to run the sample on a test system, since it requires test signing. When you set up your test system, ensure that VBS is enabled. The instructions below work for a Hyper-V VM:
 
-##### Generation 1 VM
+##### Generation 1 VM (not recommended, you should use gen2)
 On your host system, in an administrator prompt, run:
 ```powershell
 Set-VMProcessor -VmName "My VM Name" -ExposeVirtualizationExtensions $true
@@ -55,13 +55,13 @@ Once you have a test signing certificate created and have enabled test signing o
 #### Strict Memory
 As of Windows SDK 10.0.26100.3624, VBS enclaves support a strict memory policy that prevents the enclave from directly accessing VTL0 memory. This removes a lot of attack surface that can result from not validating pointers before accessing them in the enclave.
 
-To enable this policy in the enclave, use the `strict_memory` feature; this is reflected in the build instructions below, but if you do not specify it, it will default to the old, insecure, policy.
+The `strict_memory` feature enables this by default. If you want to build it with the old, insecure, policy then you must specify `--no-default-flags` with `cargo build`.
 
 #### Debug build
 
 ```powershell
 cd sample
-cargo build --features strict_memory
+cargo build
 veiid.exe .\target\debug\sample_vbs_enclave_rs.dll
 
 # Replace "MyTestEnclaveCert" with your test signing certificate's name
@@ -72,7 +72,7 @@ signtool.exe sign /ph /fd SHA256 /n "MyTestEnclaveCert" target\debug\sample_vbs_
 
 ```powershell
 cd sample
-cargo build -r --features strict_memory
+cargo build -r
 veiid.exe .\target\release\sample_vbs_enclave_rs.dll
 
 # Replace "MyTestEnclaveCert" with your test signing certificate's name
